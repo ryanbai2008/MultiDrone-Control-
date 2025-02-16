@@ -4,7 +4,6 @@ import math
 import cv2 
 import time
 from time import sleep
-from KeyboardControls import keyboard as kp
 import numpy as np
 import threading
 import sys
