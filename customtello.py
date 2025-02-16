@@ -171,7 +171,7 @@ class myTello:
     def get_speed(self):
         speed_data = self.get_command("speed?")
         speed_values = speed_data.split()
-        return speed_values
+        return speed_values[0]
 
     def get_AngularSpeed(self, startingyaw):
         imudata = self.get_command("attitude?", self.sock, self.wifi_adapter_ip)

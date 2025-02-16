@@ -62,10 +62,10 @@ class CV:
         avg_center[1] /= count
         turn_left = 0
         if avg_center[0] > (width + 50) / 2: #has to be certain amount past center to call for adjustments
-            turn_left = -1 * min(10, 1.05 ** (avg_center[0] - width / 2)) #############################adjust for magnitude of turning, perhaps include distance, adjusting for move_left vals in path_planner 
+            turn_left = -1 * min(5, 1.05 ** (avg_center[0] - width / 2)) #############################adjust for magnitude of turning, perhaps include distance, adjusting for move_left vals in path_planner 
 #######################################################################################################will also have an effect
         elif avg_center[0] < (width - 50) / 2: #same here     #######################this returns the angle it should rotate, adjust this in main.py to become velocity for smoothness
-            turn_left = 1 * min(10, 1.05 ** (avg_center[0] - width / 2))
+            turn_left = 1 * min(5, 1.05 ** (avg_center[0] - width / 2))
         return turn_left
 
     cv2.destroyAllWindows()

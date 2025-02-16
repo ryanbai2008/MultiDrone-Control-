@@ -13,14 +13,16 @@ from localizeIRT import localizer
 import socket
 import os
 from customtello import myTello
-'''
+import path_planner
+import tello_tracking
+import collision
+
 # Define the IP addresses of the two Wi-Fi adapters
 WIFI_ADAPTER_1_IP = "192.168.10.2"  # IP address of Wi-Fi Adapter 1 (connected to Drone 1)
 WIFI_ADAPTER_2_IP = "192.168.10.4"  # IP address of Wi-Fi Adapter 2 (connected to Drone 2)
 
 drone1 = myTello(WIFI_ADAPTER_1_IP)
 drone2 = myTello(WIFI_ADAPTER_2_IP)
-
 
 drone1.connect()
 drone2.connect()
@@ -67,43 +69,6 @@ height1 = drone1.getHeight()
 height2 = drone2.getHeight()
 
 
-def get_speed():
-    # Request the current speed from Tello
-    speed_data1 = get_command("speed?", sock1, WIFI_ADAPTER_1_IP)
-    speed_data2 = get_command("speed?", sock2, WIFI_ADAPTER_2_IP)
-    speed_values1 = speed_data1.split()
-    speed_values2 = speed_data2.split()
-    linearSpeed1 = int(speed_values1[0])
-    linearSpeed2 = int(speed_values2[0])
-    return linearSpeed1, linearSpeed2
-
-def get_AngularSpeed(startingyaw1, startingyaw2):
-    imudata1 = get_command("attitude?", sock1, WIFI_ADAPTER_1_IP)
-    imudata2 = get_command("attitude?", sock2, WIFI_ADAPTER_2_IP)
-    yawvalues1 = imudata1.split()
-    yawvalues2 = imudata2.split()
-    currentyaw1 = int(yawvalues1[0])
-    currentyaw2 = int(yawvalues2[0])
-
-    # Calculate the change in yaw
-    yaw_difference1 = currentyaw1 - startingyaw1
-    yaw_difference2 = currentyaw2 - startingyaw2
-
-    # Handle potential yaw wraparound (e.g., from 360° back to 0°)
-    if yaw_difference1 > 180:
-        yaw_difference1 -= 360
-    elif yaw_difference1 < -180:
-        yaw_difference1 += 360
-    angular_speed1 = yaw_difference1 / 1  
-        
-    if yaw_difference2 > 180:
-        yaw_difference2 -= 360
-    elif yaw_difference2 < -180:
-        yaw_difference2 += 360
-    angular_speed2 = yaw_difference2 / 1 
-    
-    return angular_speed1, angular_speed2, currentyaw1, currentyaw2
-
 def updateScreen():
     startingyaw1 = 0
     startingyaw2 = 0
@@ -112,9 +77,11 @@ def updateScreen():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False    
-        speedx1, speedx2 = get_speed()
-        speedz1, speedz2, startingyaw1, startingyaw2 = get_AngularSpeed(startingyaw1, startingyaw2)
-            
+        speedx1 = drone1.get_speed()
+        speedx2 = drone2.get_speed()
+        speedz1, startingyaw1 = drone1.get_AngularSpeed(startingyaw1, startingyaw2)
+        speedz2 , startingyaw2 =drone2.get_AngularSpeed(startingyaw1, startingyaw2)
+
         battery1 = drone1.getBattery()
         battery2 = drone2.getBattery()
 
@@ -123,7 +90,8 @@ def updateScreen():
 
         startMap.start_screen(battery1, speedx1, speedz1, height1, battery2, speedx2, speedz2, height2)
         sleep(1)
-'''
+
+
 #Before takeoff, must faced the drone in the direction that the map faces (Face it upward on the map)
 #control the drone with keyboard, initiates the keyboard
 #kp.init()
@@ -263,89 +231,15 @@ if intersection:
     screen.blit(position_text, intersection)
     pygame.draw.circle(screen, (128, 0, 128), intersection, 6) #purple dot at intesection 
     intersection = (intersectx, intersecty)
+    collisiondetect = collision(path2[0], intersection, 500, 500)
+    collisiondetect.get_vertex() 
 print(intersection)
 print(personpos)
-'''
-def cv(): ##put this in main while loop
-    send_command("streamon", sock1, WIFI_ADAPTER_1_IP)
-    send_command("streamon", sock2, WIFI_ADAPTER_2_IP)
-    
-    cfg_path = "yolo_model/yolov3.cfg" ###############this file should be on github lemme get link:
-    weights_path = "yolo_model/yolov3.weights"
-    net = cv2.dnn.readNet(weights_path, cfg_path, framework='Darknet')
 
 
-    with open("yolo_model/coco.names", "r") as f:
-        classes = [line.strip() for line in f.readlines()]
-
-
-    layer_names = net.getLayerNames()
-    output_layers = [layer_names[i - 1] for i in net.getUnconnectedOutLayers()]
-
-
-    try:
-        while True:
-            frame = tello.get_frame_read().frame #######do for both drones###########
-            height, width, channels = frame.shape 
-            blob = cv2.dnn.blobFromImage(frame, 0.00392, (416, 416), (0, 0, 0), True, crop=False)
-            net.setInput(blob)
-            outs = net.forward(output_layers)
-            
-            class_ids = []
-            confidences = []
-            boxes = []
-            
-            for out in outs:
-                for detection in out:
-                    scores = detection[5:]
-                    class_id = np.argmax(scores)
-                    confidence = scores[class_id]
-                    
-                    if confidence > 0.5 and class_id == 0:
-                        center_x = int(detection[0] * width)
-                        center_y = int(detection[1] * height)
-                        w = int(detection[2] * width)
-                        h = int(detection[3] * height)
-
-                        x = int(center_x - w / 2)
-                        y = int(center_y - h / 2)
-                        
-                        boxes.append([x, y, w, h])
-                        confidences.append(float(confidence))
-                        class_ids.append(class_id)
-            
-            indices = cv2.dnn.NMSBoxes(boxes, confidences, 0.5, 0.4)
-            
-            if len(indices) > 0:
-                for i in indices.flatten():
-                    x, y, w, h = boxes[i]
-                    label = str(classes[class_ids[i]])
-                    confidence = str(round(confidences[i], 2))
-
-                    cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
-                    cv2.putText(frame, label + " " + confidence, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
-            
-            cv2.imshow("Human Detection and Tracking with Tello", frame)
-            
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
-    finally:
-        tello.streamoff()
-        # tello.land()
-        tello.end()
-        cv2.destroyAllWindows()
-'''
-# Create threads for video streaming
-#thread1 = threading.Thread(target=receive_video, args=(sock1, "Drone 1 Video Stream"))
-#thread2 = threading.Thread(target=receive_video, args=(sock2, "Drone 2 Video Stream"))
-
-# Start the threads
-#thread1.start()
-#thread2.start()
-
-# Wait for both threads to complete
-#thread1.join()
-#thread2.join()
+def move_parabolic(self, drone, speed, time, distance):
+    drone2.send_rc(0, 0, 0, int(speed))
+    drone.send_rc(0, 0, 0, int(speed))
 
 #Saves the screen to be blitted
 saveImg = pygame.Rect(0, 100, screen_width, screen_height-105)
@@ -360,6 +254,92 @@ drone1Img = scaleImgDown(drone1Img, 0.085) #Scale down to 8.5%
 
 drone2Img = pygame.image.load('tello2.png')  # Replace with your image file path
 drone2Img = scaleImgDown(drone2Img, 0.03) # Scale down to 3%
+
+#position values for path planning
+start_pos1X, start_pos1Y = path[0]
+end_pos1X, end_pos1Y = path[1]
+start_pos2X, start_pos2Y = path2[0]
+end_pos2X, end_pos2Y = path2[1]
+
+#drones current position values
+drone_1_pos = [start_pos1X, start_pos1Y, 0] #initial angle of 0
+drone_2_pos = [start_pos2X, start_pos2Y, 0] #initial angle of 0
+drone_1_movement = [0, 0]
+drone_2_movement = [0, 0]
+
+
+#path planning objects and CV objects
+drone_1_path_plan = path_planner.PathPlan(start_pos1X, end_pos1X, start_pos1Y, end_pos1Y, drone_1_pos[2]) #########place both drones facing to the right facing horizontally
+drone_2_path_plan = path_planner.PathPlan(start_pos2X, end_pos2X, start_pos2Y, end_pos2Y, drone_2_pos[2])
+drone_CV = tello_tracking.CV()
+
+#has goal been reached for drones
+drone_1_terminate = False
+drone_2_terminate = False
+
+#turn on drones cameras
+drone1.streamon()
+drone2.streamon()
+drone1.start_video_thread("Drone 1 Video Stream")
+drone2.start_video_thread("Drone 2 Video Stream")
+
+#how frequently the position is updated
+sleep_time = 0
+timer = 0
+iter = 0
+
+while not drone_1_terminate and drone_2_terminate:
+    #######add thing locate human pos and update angle
+
+
+    img1 = drone1.get_frame_read()
+    img2 = drone2.get_frame_read()
+    turn_left_1 = drone_CV.center_subject(img1)
+    turn_left_2 = drone_CV.center_subject(img2)
+    
+    if iter == 0:
+        sleep_time = 0 #do not update positions for the first loop
+    else:
+        iter += 1
+        sleep_time = time.time() - timer
+    
+    if not drone_1_terminate:
+        drone_1_pos[0] += drone_1_movement[0] * sleep_time
+        drone_1_pos[1] += drone_1_movement[1] * sleep_time
+        drone_1_pos[2] += turn_left_1 * sleep_time
+        drone_1_pos[2] = drone_1_pos[2] % 360
+    else:
+        drone_1_pos[2] += turn_left_1 * sleep_time
+        drone_1_pos[2] = drone_1_pos[2] % 360
+    if not drone_2_terminate:   
+        drone_2_pos[0] += drone_2_movement[0] * sleep_time
+        drone_2_pos[1] += drone_2_movement[1] * sleep_time
+        drone_2_pos[2] += turn_left_2 * sleep_time
+        drone_2_pos[2] = drone_2_pos[2] % 360
+    else:
+        drone_2_pos[2] += turn_left_2 * sleep_time
+        drone_2_pos[2] = drone_2_pos[2] % 360
+
+    #path planning
+    drone_1_movement = drone_1_path_plan.move_towards_goal(drone_1_pos[0], drone_1_pos[1], drone_1_pos[2], drone_1_terminate)
+    drone_2_movement = drone_2_path_plan.move_towards_goal(drone_2_pos[0], drone_2_pos[1], drone_2_pos[2], drone_2_terminate)
+    if drone_1_movement[0] == "goal_reached":
+        drone_1_terminate = True
+    if drone_2_movement[0] == "goal_reached":
+        drone_2_terminate = True
+    
+    #move drone and update values, consider if drone terminated
+    if not drone_1_terminate:
+        drone1.send_rc(drone_1_movement[0], drone_1_movement[1], 0, turn_left_1)
+    else:
+        drone1.sendrc(0, 0, 0, turn_left_1)
+
+    if not drone_2_terminate:   
+        drone2.send_rc(drone_2_movement[0], drone_2_movement[1], 0, turn_left_2)
+    else:
+        drone2.send_rc(0, 0, 0, turn_left_2)
+    timer = time.time() ###########figure out timing######################
+    
 
 def drawPoints(screen, points, droneimg, yaw):
     font = pygame.font.SysFont('Times',25)
@@ -394,8 +374,8 @@ step2 = 0
 yaw2 = 0
 
 start_pos1 = path[0]
-end_pos1 = path[1]
 start_pos2 = path2[0]
+end_pos1 = path[1]
 end_pos2 = path2[1]
 
 # Initialize the current position
@@ -442,15 +422,15 @@ drawPoints(screen, drone1points, drone1Img, yaw1)
 drawPoints(screen, drone2points, drone2Img, yaw2)
 
 #MOVES THE DRONES
-#drone_thread = threading.Thread(target=move_tello, args={distanceInCm, distanceInCm2, angle, angle2})
-#drone_thread.start()
+drone_thread = threading.Thread(target=move_tello, args={distanceInCm, distanceInCm2, angle, angle2})
+drone_thread.start()
 
 #updates the screen
-#screenThread = threading.Thread(target=updateScreen)
-#screenThread.start()
+screenThread = threading.Thread(target=updateScreen)
+screenThread.start()
 
 #delays for the takeoff time
-#time.sleep(3)
+time.sleep(3)
 running = True
 while running:
     for event in pygame.event.get():
@@ -492,7 +472,7 @@ while running:
 
     drawPoints(screen, drone2points, drone2Img, yaw2)
     pygame.display.update()
-
+    
     pygame.time.delay(int(updateTime))
 
 pygame.quit()
