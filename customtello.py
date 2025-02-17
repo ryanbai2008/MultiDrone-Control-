@@ -31,12 +31,12 @@ class myTello:
         self.running = False
 
     # Function to send command to Tello drone
-    def send_command(self, command, sock, adapter_ip, retries=3):
+    def send_command(self, command, retries=5):
         for attempt in range(retries):
             try:
-                sock.sendto(command.encode('utf-8'), (self.TELLO_IP, self.PORT))
+                self.sock.sendto(command.encode('utf-8'), (self.TELLO_IP, self.PORT))
                 logging.info(f"Sent command to drone via {self.wifi_adapter_ip}: {command}")
-                print(f"Sent command to drone via {adapter_ip}: {command}") #message to send command
+                print(f"Sent command to drone via {self.wifi_adapter_ip}: {command}") #message to send command
                 response, _ = self.sock.recvfrom(self)
                 response_decoded = response.decode('utf8') #gets the respond
                 logging.debug(f"Response: {response_decoded}")
@@ -46,12 +46,12 @@ class myTello:
         logging.error(f"Failed to send command '{command}' after {retries} attempts")
         return None
     
-    def get_command(self, command, sock, adapter_ip, retries=3):
+    def get_command(self, command, retries=5):
         for attempt in range(retries):
             try:
-                sock.sendto(command.encode('utf-8'), (self.TELLO_IP, self.PORT))
-                logging.info(f"Sent command to drone via {adapter_ip}: {command}") #message to send command
-                response, _ = sock.recvfrom(self.BUFFER_SIZE)
+                self.sock.sendto(command.encode('utf-8'), (self.TELLO_IP, self.PORT))
+                logging.info(f"Sent command to drone via {self.wifi_adapter_ip}: {command}") #message to send command
+                response, _ = self.sock.recvfrom(self.BUFFER_SIZE)
                 return response.decode('utf-8') #gets the response
             except Exception as e:
                 logging.error(f"Error getting command '{command}': {e}")
@@ -60,10 +60,10 @@ class myTello:
     
     def connect(self):
         # Connect to the drones by sending the 'command' mode
-        self.send_command("command", self.sock, self.wifi_adapter_ip)
+        self.send_command("command")
 
     def takeoff(self):
-        self.send_command("takeoff", self.sock, self.wifi_adapter_ip)
+        self.send_command("takeoff")
 
     def streamon(self):
         self.send_command("streamon")
@@ -72,34 +72,26 @@ class myTello:
         self.send_command("streamoff")
 
     # Function to decode and display the video stream
-    def receive_video(self, window_name):
-        frame = bytearray()
-        self.streamon()
+    def receive_video(self):
+        video_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        video_socket.bind('0.0.0.0', 11111)
+        self.running = True
         while self.running:
             try:
-                data, _ = self.sock.recvfrom(2048)
-                frame += data
+                packet, _ = self.sock.recvfrom(2048)
 
-                if len(data) != 1460:
-                    npframe = np.frombuffer(frame, dtype=np.uint8)
-                    image = cv2.imdecode(npframe, cv2.IMREAD_COLOR)
+                if len(packet) == 0:
+                    frame = np.array(bytearray(packet), dtype=np.uint8)
+                    img = cv2.imdecode(frame, cv2.IMREAD_COLOR)
+                    if img is not None:
+                    
+                        cv2.imshow("Tello Stream", img)
+                        logging.debug(f"Displaying video frame o")
 
-                    if image is not None and image.size > 0:
-                        with self.frame_lock:
-                            self.frame = image
-                        cv2.imshow(window_name, image)
-                        logging.debug(f"Displaying video frame on {window_name}")
-
-                    frame = bytearray()
-
-                if cv2.waitKey(1) & 0xFF == ord('q'):
-                    break
+                
             except Exception as e:
                 logging.error(f"Error in video streaming: {e}")
-
-        self.streamoff()
-        self.sock.close()
-        cv2.destroyAllWindows()
+                break
 
     def get_frame_read(self):
         return self.frame
@@ -108,9 +100,9 @@ class myTello:
         self.send_command("emergency")
 
     #automatically turns stream on
-    def start_video_thread(self, window_name):
+    def start_video_thread(self):
         self.running = True
-        self.video_thread = Thread(target=self.receive_video, args=(window_name,))
+        self.video_thread = Thread(target=self.receive_video, args=())
         self.video_thread.start()
 
     def end(self):
@@ -121,7 +113,7 @@ class myTello:
 
     def moveForward(self, distance):
         # Move drones forward
-        self.send_command(f"forward {distance}", self.sock, self.wifi_adapter_ip)
+        self.send_command(f"forward {distance}")
 
     def moveBackward(self, distance):
         self.send_command(f"back {distance}")
@@ -149,23 +141,23 @@ class myTello:
 
     def land(self):
         # Land both drones
-        self.send_command("land", self.sock, self.wifi_adapter_ip)
+        self.send_command("land")
         self.sock.close()
 
     def rotateCCW(self, angle):
-        self.send_command(f'ccw {abs(angle)}', self.sock, self.wifi_adapter_ip)
+        self.send_command(f'ccw {abs(angle)}')
 
     def rotateCW(self, angle):
-        self.send_command(f'cw {abs(angle)}', self.sock, self.wifi_adapter_ip)
+        self.send_command(f'cw {abs(angle)}')
 
 
     def getBattery(self):
-        battery = self.get_command("battery?", self.sock, self.wifi_adapter_ip)
+        battery = self.get_command("battery?")
         return battery
 
 
     def getHeight(self):
-        height = self.get_command("height?", self.sock, self.wifi_adapter_ip)
+        height = self.get_command("height?")
         return height
     
     def get_speed(self):
@@ -174,7 +166,7 @@ class myTello:
         return speed_values[0]
 
     def get_AngularSpeed(self, startingyaw):
-        imudata = self.get_command("attitude?", self.sock, self.wifi_adapter_ip)
+        imudata = self.get_command("attitude?")
         yawvalues = imudata.split()
         currentyaw = int(yawvalues[0])
 

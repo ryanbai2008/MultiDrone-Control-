@@ -20,7 +20,8 @@ class CV:
         outs = self.net.forward(self.output_layers)
         class_ids = []
         confidences = []
-        boxes = [] 
+        boxes = []
+        detected_human = False 
         for out in outs:
             for detection in out:
                 scores = detection[5:]
@@ -28,6 +29,7 @@ class CV:
                 confidence = scores[class_id]
                     
                 if confidence > 0.5 and class_id == 0:
+                    detected_human = True
                     center_x = int(detection[0] * width)
                     center_y = int(detection[1] * height)
                     w = int(detection[2] * width)
@@ -66,6 +68,5 @@ class CV:
 #######################################################################################################will also have an effect
         elif avg_center[0] < (width - 50) / 2: #same here     #######################this returns the angle it should rotate, adjust this in main.py to become velocity for smoothness
             turn_left = 1 * min(5, 1.05 ** (avg_center[0] - width / 2))
-        return turn_left
+        return turn_left, detected_human
 
-    cv2.destroyAllWindows()

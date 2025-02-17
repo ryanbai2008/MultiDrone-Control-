@@ -19,7 +19,7 @@ import collision
 
 # Define the IP addresses of the two Wi-Fi adapters
 WIFI_ADAPTER_1_IP = "192.168.10.2"  # IP address of Wi-Fi Adapter 1 (connected to Drone 1)
-WIFI_ADAPTER_2_IP = "192.168.10.4"  # IP address of Wi-Fi Adapter 2 (connected to Drone 2)
+WIFI_ADAPTER_2_IP = "192.168.10.3"  # IP address of Wi-Fi Adapter 2 (connected to Drone 2)
 
 drone1 = myTello(WIFI_ADAPTER_1_IP)
 drone2 = myTello(WIFI_ADAPTER_2_IP)
@@ -30,7 +30,7 @@ drone2.connect()
 def move_tello(distance1, distance2, angle1, angle2):# Define the Tello IP and port
     # Take off both drones
     drone1.takeoff
-    time.sleep(20)
+    time.sleep(5)
 
     #rotates the first drone
     if angle1 < 0:
@@ -38,7 +38,7 @@ def move_tello(distance1, distance2, angle1, angle2):# Define the Tello IP and p
         drone1.rotateCCW(abs(angle))
     elif angle1 > 0:
         print("Rotating")
-        drone1.rotateCW(angle)
+        drone1.rotateCW(abs(angle))
     else:
         print("No rotation needed")
 
@@ -48,7 +48,7 @@ def move_tello(distance1, distance2, angle1, angle2):# Define the Tello IP and p
         drone2.rotateCCW(abs(angle2))
     elif angle2 > 0:
         print("Rotating")
-        drone2.rotateCCW(abs(angle))
+        drone2.rotateCCW(abs(angle2))
     else:
         print("No rotation needed")
     time.sleep(10)
@@ -56,6 +56,8 @@ def move_tello(distance1, distance2, angle1, angle2):# Define the Tello IP and p
     # Move drones forward
     drone1.moveForward(distance1)
     drone2.moveForward(distance2)
+  
+
     time.sleep(10)
 
     # Land both drones
@@ -278,24 +280,44 @@ drone_1_terminate = False
 drone_2_terminate = False
 
 #turn on drones cameras
+drone1.connect()
+drone2.connect()
 drone1.streamon()
 drone2.streamon()
-drone1.start_video_thread("Drone 1 Video Stream")
-drone2.start_video_thread("Drone 2 Video Stream")
+drone1.start_video_thread()
+drone2.start_video_thread()
+drone1.takeoff()
+drone2.takeoff()
 
 #how frequently the position is updated
 sleep_time = 0
 timer = 0
 iter = 0
 
-while not drone_1_terminate and drone_2_terminate:
-    #######add thing locate human pos and update angle
+'''
+drone1.send_rc(0, 0, 0, 30)
+drone2.send_rc(0, 0, 0, 30)
+human_yes_2, human_yes_1 = False, False
+while not human_yes_1 and human_yes_2:
+    img1 = drone1.get_frame_read()
+    img2 = drone2.get_frame_read()
+    drone_CV.center_subject(img1)
+    turn_left_1, human_yes_1 = drone_CV.center_subject(img1)
+    turn_left_2, human_yes_2 = drone_CV.center_subject(img2)
+    print(human_yes_1)
+    print(human_yes_2)
+    if human_yes_1:
+        drone1.send_rc(0, 0, 0, 0)
+    if human_yes_2:
+        drone2.send_rc(0, 0, 0, 0)
 
+
+while not drone_1_terminate and drone_2_terminate:
 
     img1 = drone1.get_frame_read()
     img2 = drone2.get_frame_read()
-    turn_left_1 = drone_CV.center_subject(img1)
-    turn_left_2 = drone_CV.center_subject(img2)
+    turn_left_1, __ = drone_CV.center_subject(img1)
+    turn_left_2, __ = drone_CV.center_subject(img2)
     
     if iter == 0:
         sleep_time = 0 #do not update positions for the first loop
@@ -339,8 +361,14 @@ while not drone_1_terminate and drone_2_terminate:
     else:
         drone2.send_rc(0, 0, 0, turn_left_2)
     timer = time.time() ###########figure out timing######################
-    
 
+drone1.land()
+drone2.land()
+drone1.streamoff()
+drone2.streamoff()
+drone1.end()
+drone2.end()
+'''
 def drawPoints(screen, points, droneimg, yaw):
     font = pygame.font.SysFont('Times',25)
     
@@ -426,8 +454,8 @@ drone_thread = threading.Thread(target=move_tello, args={distanceInCm, distanceI
 drone_thread.start()
 
 #updates the screen
-screenThread = threading.Thread(target=updateScreen)
-screenThread.start()
+#screenThread = threading.Thread(target=updateScreen)
+#screenThread.start()
 
 #delays for the takeoff time
 time.sleep(3)
