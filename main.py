@@ -343,8 +343,8 @@ def localize():
     dy2 = (end_pos2[1] - start_pos2[1]) / drone2num_steps
 
     initial_yaw = 0  # Initial yaw angle in degrees
-    target_yaw1 = angle  # Target yaw angle in degrees (can be adjusted)
-    target_yaw2 = angle2
+    target_yaw1 = -(math.atan2(path[1][1] - personpospx[1], path[1][0] - personpospx[0])) * math.pi/180 # Target yaw angle in degrees (can be adjusted)
+    target_yaw2 = -(math.atan2(path2[1][1] - personpospx[1], path2[1][0] - personpospx[0]))* math.pi/180
     print(target_yaw1)
     print(target_yaw2)
 
@@ -487,55 +487,56 @@ while not drone_1_terminate and not drone_2_terminate:
         logging.debug("Processed frame")
     else:
         logging.debug("no frame recieved")
-    
-    if iter == 0:
-        sleep_time = 0 #do not update positions for the first loop
-        iter += 1
-    else:
-        sleep_time = time.time() - timer
-    
-    if not drone_1_terminate:
-        drone_1_pos[0] += drone_1_movement[0] * sleep_time
-        drone_1_pos[1] += drone_1_movement[1] * sleep_time
-        drone_1_pos[2] += turn_1 * sleep_time
-        drone_1_pos[2] = drone_1_pos[2] % 360
-    else:
-        drone_1_pos[2] += turn_1 * sleep_time
-        drone_1_pos[2] = drone_1_pos[2] % 360
-    if not drone_2_terminate:   
-        drone_2_pos[0] += drone_2_movement[0] * sleep_time
-        drone_2_pos[1] += drone_2_movement[1] * sleep_time
-        drone_2_pos[2] += turn_2 * sleep_time
-        drone_2_pos[2] = drone_2_pos[2] % 360
-    else:
-        drone_2_pos[2] += turn_2 * sleep_time
-        drone_2_pos[2] = drone_2_pos[2] % 360
 
-    if intersection:
-        if(drone2.getHeight() >= drone1.getHeight() + 20):
-            drone2.send_rc(0, 0, -20, 0)
-            intersection1 = True
-            intersection = False
-            
-    if intersection1:
-        if(drone2.getHeight() == drone1.getHeight()):
-            drone2.send_rc(0, 0, 0, 0)
+    if img2 is not None and img1 is not None:
+        if iter == 0:
+            sleep_time = 0 #do not update positions for the first loop
+            iter += 1
+        else:
+            sleep_time = time.time() - timer
+        
+        if not drone_1_terminate:
+            drone_1_pos[0] += drone_1_movement[0] * sleep_time
+            drone_1_pos[1] += drone_1_movement[1] * sleep_time
+            drone_1_pos[2] += turn_1 * sleep_time
+            drone_1_pos[2] = drone_1_pos[2] % 360
+        else:
+            drone_1_pos[2] += turn_1 * sleep_time
+            drone_1_pos[2] = drone_1_pos[2] % 360
+        if not drone_2_terminate:   
+            drone_2_pos[0] += drone_2_movement[0] * sleep_time
+            drone_2_pos[1] += drone_2_movement[1] * sleep_time
+            drone_2_pos[2] += turn_2 * sleep_time
+            drone_2_pos[2] = drone_2_pos[2] % 360
+        else:
+            drone_2_pos[2] += turn_2 * sleep_time
+            drone_2_pos[2] = drone_2_pos[2] % 360
 
-    #path planning
-    drone_1_movement = drone_1_path_plan.move_towards_goal(drone_1_pos[0], drone_1_pos[1], drone_1_pos[2], drone_1_terminate)
-    drone_2_movement = drone_2_path_plan.move_towards_goal(drone_2_pos[0], drone_2_pos[1], drone_2_pos[2], drone_2_terminate)
-    if drone_1_movement[0] == 0.1:
-        drone_1_terminate = True
-        drone_1_movement[0], drone_1_movement[1] = 0, 0
-    if drone_2_movement[0] == 0.1:
-        drone_2_terminate = True
-        drone_2_movement[0], drone_2_movement[1] = 0, 0
-    
-    #move drone
-    drone1.send_rc(drone_1_movement[0], drone_1_movement[1], 0, turn_1)
-    drone2.send_rc(drone_2_movement[0], drone_2_movement[1], 0, turn_2)
+        if intersection:
+            if(drone2.getHeight() >= drone1.getHeight() + 20):
+                drone2.send_rc(0, 0, -20, 0)
+                intersection1 = True
+                intersection = False
+                
+        if intersection1:
+            if(drone2.getHeight() == drone1.getHeight()):
+                drone2.send_rc(0, 0, 0, 0)
 
-    timer = time.time()
+        #path planning
+        drone_1_movement = drone_1_path_plan.move_towards_goal(drone_1_pos[0], drone_1_pos[1], drone_1_pos[2], drone_1_terminate)
+        drone_2_movement = drone_2_path_plan.move_towards_goal(drone_2_pos[0], drone_2_pos[1], drone_2_pos[2], drone_2_terminate)
+        if drone_1_movement[0] == 0.1:
+            drone_1_terminate = True
+            drone_1_movement[0], drone_1_movement[1] = 0, 0
+        if drone_2_movement[0] == 0.1:
+            drone_2_terminate = True
+            drone_2_movement[0], drone_2_movement[1] = 0, 0
+        
+        #move drone
+        drone1.send_rc(drone_1_movement[0], drone_1_movement[1], 0, turn_1)
+        drone2.send_rc(drone_2_movement[0], drone_2_movement[1], 0, turn_2)
+
+        timer = time.time()
 
 drone1.land()
 drone2.land()

@@ -90,7 +90,6 @@ class myTello:
                 with self.frame_lock:
                     self.frame = frame
                 #cv2.imshow(self.wifi_adapter_ip, self.frame)
-                cv2.waitKey(1)
             
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
@@ -156,6 +155,13 @@ class myTello:
     def rotateCW(self, angle):
         self.send_command(f'cw {abs(angle)}')
 
+    def getYaw(self):
+        imudata = self.get_command("attitude?")
+        yawvalues = imudata.split()
+        currentyaw = yawvalues[0]
+        return currentyaw
+
+        # Calculate the change in yaw
 
     def getBattery(self):
         battery = self.get_command("battery?")
@@ -168,8 +174,21 @@ class myTello:
     
     def get_speed(self):
         speed_data = self.get_command("speed?")
-        speed_values = speed_data.split()
-        return speed_values[0]
+        return speed_data
 
     def get_AngularSpeed(self, startingyaw):
-        return 10
+        imudata = self.get_command("attitude?")
+        #yawvalues = imudata.split()
+        currentyaw = 0#(yawvalues[0])
+
+        # Calculate the change in yaw
+        yaw_difference = currentyaw - startingyaw
+
+        # Handle potential yaw wraparound (like from 360° back to 0°)
+        if yaw_difference > 180:
+            yaw_difference -= 360
+        elif yaw_difference < -180:
+            yaw_difference += 360
+        angular_speed1 = yaw_difference / 1  
+        
+        return angular_speed1

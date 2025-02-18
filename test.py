@@ -19,6 +19,9 @@ drone_CV = tello_tracking.CV()
 drone.connect()
 drone.streamon()
 drone.start_video_thread()
+print(drone.getYaw())
+print(drone.get_speed())
+
 human_yes_1 = False
 while not human_yes_1:
     img1 = drone.get_frame_read()
