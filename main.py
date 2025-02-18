@@ -281,6 +281,155 @@ sleep_time = 0
 timer = 0
 iter = 0
 
+def drawPoints(screen, points, droneimg, yaw):
+    font = pygame.font.SysFont('Times',25)
+    
+    for point in points:
+        pygame.draw.circle(screen, (255, 0, 0), point, 3) #draws a red dot/line for the visited nodes/area
+    # Rotate the image based on the yaw angle and draw it on the screen
+    rotated_image = pygame.transform.rotate(droneimg, -yaw)
+    image_rect = rotated_image.get_rect(center=(points[-1][0], points[-1][1]))
+    screen.blit(rotated_image, image_rect.topleft)
+
+    pygame.draw.circle(screen, (0, 255, 0), points[-1], 3) #green dot on the image for tracking
+    
+    #adds positional text data, (0,0) is bottom left corner
+    x_cord = (int)((points[-1][0])/sizeCoeff)
+    y_cord  = (int)((screen_height  - points[-1][1])/sizeCoeff)
+    position_text = font.render(f'({x_cord}, {y_cord})cm', True, (255, 0, 0))
+    screen.blit(position_text, (points[-1][0] + 10, points[-1][1] + 10))
+
+def localize():
+    background = Background('pathPlanned2.png', [0, 0], 1)
+    x,y = 0, 0 # origin
+
+    drone1points = [(x, y)]
+    drone2points = [(x, y)]
+
+    updateTime = 0.004 #amount of times we want to step (CHANGE THIS VALUE DEPENDING ON ACCCURACY, Controls odometry accuracy)
+    angleUpdateTime = 0.005
+    step1 = 0
+    yaw1 = 0
+    step2 = 0
+    yaw2 = 0
+
+    start_pos1 = path[0]
+    start_pos2 = path2[0]
+    end_pos1 = path[1]
+    end_pos2 = path2[1]
+
+    # Initialize the current position
+    drone1current_pos = list(start_pos1)
+    drone1previous_pos = drone1current_pos.copy()
+
+    linearSpeed = 500
+    angularSpeed = 500
+
+    timeDur = distanceInCm/linearSpeed
+    rotationDur = angle/angularSpeed
+
+    timeDur2 = distanceInCm2/linearSpeed
+    rotationDur2 = angle2/angularSpeed
+
+    drone1num_steps = int(timeDur / updateTime)
+    drone1angle_num_steps = int(rotationDur / angleUpdateTime)
+
+    drone2current_pos = list(start_pos2)
+    drone2previous_pos= drone2current_pos.copy()
+    drone2num_steps = int(timeDur2 / updateTime)
+    drone2angle_num_steps = int(rotationDur2 / angleUpdateTime)
+
+
+    # Calculate the increments in x and y directions
+    dx1 = (end_pos1[0] - start_pos1[0]) / drone1num_steps
+    dy1 = (end_pos1[1] - start_pos1[1]) / drone1num_steps
+
+    dx2 = (end_pos2[0] - start_pos2[0]) / drone2num_steps
+    dy2 = (end_pos2[1] - start_pos2[1]) / drone2num_steps
+
+    initial_yaw = 0  # Initial yaw angle in degrees
+    target_yaw1 = angle  # Target yaw angle in degrees (can be adjusted)
+    target_yaw2 = angle2
+    print(target_yaw1)
+    print(target_yaw2)
+
+    drone1points.append(drone1current_pos)
+    drone2points.append(drone2current_pos)
+
+    #start_time = pygame.time.get_ticks()  # Get the start time
+    #rotation_done = False
+    drawPoints(screen, drone1points, drone1Img, yaw1)
+    drawPoints(screen, drone2points, drone2Img, yaw2)
+
+    #MOVES THE DRONES
+    #drone_thread = threading.Thread(target=move_tello, args={distanceInCm, distanceInCm2, angle, angle2})
+    #drone_thread.start()
+
+    #updates the screen
+    screenThread = threading.Thread(target=updateScreen)
+    screenThread.start()
+
+    #delays for the takeoff time
+    time.sleep(3)
+    running = True
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False    
+
+        screen.blit(background.image, (0, 0))    
+
+        if yaw1 != target_yaw1:
+            yaw1 += (abs(target_yaw1) - initial_yaw) / drone1angle_num_steps
+            if abs(yaw1 - target_yaw1) < 0.1:
+                yaw1 = target_yaw1  # Snap to target yaw if close
+        else:
+            if step1 <= drone1num_steps:
+                previous_pos1 = drone1current_pos.copy()
+                drone1current_pos[0] += dx1
+                drone1current_pos[1] += dy1
+                drone1points.append(tuple(drone1current_pos))
+                # Increment yaw angle
+                drone1points.append((int(drone1current_pos[0]), int(drone1current_pos[1])))
+                step1 += 1
+
+
+        if yaw2 != target_yaw2:
+            yaw2 += (abs(target_yaw2) - initial_yaw) / drone2angle_num_steps
+            if abs(yaw2 - target_yaw2) < 0.1:
+                yaw2 = target_yaw2  # Snap to target yaw if close
+        else:
+            if step2 <= drone2num_steps:
+                previous_pos2 = drone2current_pos.copy()
+                drone2current_pos[0] += dx2
+                drone2current_pos[1] += dy2
+                drone2points.append(tuple(drone2current_pos))
+                # Increment yaw angle
+                drone2points.append((int(drone2current_pos[0]), int(drone2current_pos[1])))
+                step2 += 1
+        # Draw the frame
+        drawPoints(screen, drone1points, drone1Img, yaw1)
+
+        drawPoints(screen, drone2points, drone2Img, yaw2)
+        pygame.display.update()
+        
+        pygame.time.delay(int(updateTime))
+
+    pygame.quit()
+    sys.exit()
+
+    # Ensure the final position is exactly the end position
+    drone1current_pos = end_pos1
+    drone1points.append(tuple(drone1current_pos))
+
+    drone2current_pos = end_pos2
+    drone2points.append(tuple(drone2current_pos))
+
+    pygame.display.flip()
+
+localizeThread = threading.Thread(target=localize)
+localizeThread.start()
+
 
 drone1.send_rc(0, 0, 0, 30)
 drone2.send_rc(0, 0, 0, 30)
@@ -355,150 +504,3 @@ drone1.streamoff()
 drone2.streamoff()
 drone1.end()
 drone2.end()
-
-def drawPoints(screen, points, droneimg, yaw):
-    font = pygame.font.SysFont('Times',25)
-    
-    for point in points:
-        pygame.draw.circle(screen, (255, 0, 0), point, 3) #draws a red dot/line for the visited nodes/area
-    # Rotate the image based on the yaw angle and draw it on the screen
-    rotated_image = pygame.transform.rotate(droneimg, -yaw)
-    image_rect = rotated_image.get_rect(center=(points[-1][0], points[-1][1]))
-    screen.blit(rotated_image, image_rect.topleft)
-
-    pygame.draw.circle(screen, (0, 255, 0), points[-1], 3) #green dot on the image for tracking
-    
-    #adds positional text data, (0,0) is bottom left corner
-    x_cord = (int)((points[-1][0])/sizeCoeff)
-    y_cord  = (int)((screen_height  - points[-1][1])/sizeCoeff)
-    position_text = font.render(f'({x_cord}, {y_cord})cm', True, (255, 0, 0))
-    screen.blit(position_text, (points[-1][0] + 10, points[-1][1] + 10))
-
-
-background = Background('pathPlanned2.png', [0, 0], 1)
-x,y = 0, 0 # origin
-
-drone1points = [(x, y)]
-drone2points = [(x, y)]
-
-updateTime = 0.004 #amount of times we want to step (CHANGE THIS VALUE DEPENDING ON ACCCURACY, Controls odometry accuracy)
-angleUpdateTime = 0.005
-step1 = 0
-yaw1 = 0
-step2 = 0
-yaw2 = 0
-
-start_pos1 = path[0]
-start_pos2 = path2[0]
-end_pos1 = path[1]
-end_pos2 = path2[1]
-
-# Initialize the current position
-drone1current_pos = list(start_pos1)
-drone1previous_pos = drone1current_pos.copy()
-
-linearSpeed = 500
-angularSpeed = 500
-
-timeDur = distanceInCm/linearSpeed
-rotationDur = angle/angularSpeed
-
-timeDur2 = distanceInCm2/linearSpeed
-rotationDur2 = angle2/angularSpeed
-
-drone1num_steps = int(timeDur / updateTime)
-drone1angle_num_steps = int(rotationDur / angleUpdateTime)
-
-drone2current_pos = list(start_pos2)
-drone2previous_pos= drone2current_pos.copy()
-drone2num_steps = int(timeDur2 / updateTime)
-drone2angle_num_steps = int(rotationDur2 / angleUpdateTime)
-
-
-# Calculate the increments in x and y directions
-dx1 = (end_pos1[0] - start_pos1[0]) / drone1num_steps
-dy1 = (end_pos1[1] - start_pos1[1]) / drone1num_steps
-
-dx2 = (end_pos2[0] - start_pos2[0]) / drone2num_steps
-dy2 = (end_pos2[1] - start_pos2[1]) / drone2num_steps
-
-initial_yaw = 0  # Initial yaw angle in degrees
-target_yaw1 = angle  # Target yaw angle in degrees (can be adjusted)
-target_yaw2 = angle2
-print(target_yaw1)
-print(target_yaw2)
-
-drone1points.append(drone1current_pos)
-drone2points.append(drone2current_pos)
-
-#start_time = pygame.time.get_ticks()  # Get the start time
-#rotation_done = False
-drawPoints(screen, drone1points, drone1Img, yaw1)
-drawPoints(screen, drone2points, drone2Img, yaw2)
-
-#MOVES THE DRONES
-drone_thread = threading.Thread(target=move_tello, args={distanceInCm, distanceInCm2, angle, angle2})
-drone_thread.start()
-
-#updates the screen
-screenThread = threading.Thread(target=updateScreen)
-screenThread.start()
-
-#delays for the takeoff time
-time.sleep(3)
-running = True
-while running:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False    
-
-    screen.blit(background.image, (0, 0))    
-
-    if yaw1 != target_yaw1:
-        yaw1 += (abs(target_yaw1) - initial_yaw) / drone1angle_num_steps
-        if abs(yaw1 - target_yaw1) < 0.1:
-            yaw1 = target_yaw1  # Snap to target yaw if close
-    else:
-        if step1 <= drone1num_steps:
-            previous_pos1 = drone1current_pos.copy()
-            drone1current_pos[0] += dx1
-            drone1current_pos[1] += dy1
-            drone1points.append(tuple(drone1current_pos))
-            # Increment yaw angle
-            drone1points.append((int(drone1current_pos[0]), int(drone1current_pos[1])))
-            step1 += 1
-
-
-    if yaw2 != target_yaw2:
-        yaw2 += (abs(target_yaw2) - initial_yaw) / drone2angle_num_steps
-        if abs(yaw2 - target_yaw2) < 0.1:
-            yaw2 = target_yaw2  # Snap to target yaw if close
-    else:
-        if step2 <= drone2num_steps:
-            previous_pos2 = drone2current_pos.copy()
-            drone2current_pos[0] += dx2
-            drone2current_pos[1] += dy2
-            drone2points.append(tuple(drone2current_pos))
-            # Increment yaw angle
-            drone2points.append((int(drone2current_pos[0]), int(drone2current_pos[1])))
-            step2 += 1
-    # Draw the frame
-    drawPoints(screen, drone1points, drone1Img, yaw1)
-
-    drawPoints(screen, drone2points, drone2Img, yaw2)
-    pygame.display.update()
-    
-    pygame.time.delay(int(updateTime))
-
-pygame.quit()
-sys.exit()
-
-# Ensure the final position is exactly the end position
-drone1current_pos = end_pos1
-drone1points.append(tuple(drone1current_pos))
-
-drone2current_pos = end_pos2
-drone2points.append(tuple(drone2current_pos))
-
-pygame.display.flip()
-

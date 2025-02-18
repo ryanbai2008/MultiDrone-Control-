@@ -16,19 +16,25 @@ class myTello:
         self.BUFFER_SIZE = 4096
         self.VIDEO_PORT = 11111
         self.wifi_adapter_ip = wifi_adapter_ip
-        
-        # Create and bind the UDP socket
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.sock.bind((wifi_adapter_ip, 0))
-        
-        # Get the port that was automatically selected
-        self.host, self.port = self.sock.getsockname()
-        logging.info(f"Socket bound to {self.host}:{self.port}")
-
+        self.sock = None
         self.frame = None
         self.frame_lock = Lock()
         self.video_thread = None
         self.running = False
+
+        # Initialize and bind the UDP socket
+    def init_socket(self):
+        if self.sock:
+            self.sock.close()
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try:
+            self.sock.bind((self.wifi_adapter_ip, 0))
+        except Exception as e:
+            logging.error(f"Bind failed: {e}")
+            exit()
+        # Get the port that was automatically selected
+        self.host, self.port = self.sock.getsockname()
+        logging.info(f"Socket bound to {self.host}:{self.port}")
 
     # Function to send command to Tello drone
     def send_command(self, command, retries=5):
@@ -36,7 +42,7 @@ class myTello:
             try:
                 self.sock.sendto(command.encode('utf-8'), (self.TELLO_IP, self.PORT))
                 logging.info(f"Sent command to drone via {self.wifi_adapter_ip}: {command}")
-                self.sock.settimeout(5.0)  # Set a timeout for the response
+                self.sock.settimeout(2.0)  # Set a timeout for the response
                 response, _ = self.sock.recvfrom(self.BUFFER_SIZE)
                 response_decoded = response.decode('utf8') #gets the respond
                 logging.debug(f"Response: {response_decoded}")
@@ -61,6 +67,7 @@ class myTello:
         return None
     
     def connect(self):
+        self.init_socket()  # Initialize and bind socket
         # Connect to the drones by sending the 'command' mode
         self.send_command("command")
 
@@ -74,13 +81,13 @@ class myTello:
         self.send_command("streamoff")
 
     # Function to decode and display the video stream
-    def receive_video(self, num):
+    def receive_video(self):
         cap = cv2.VideoCapture('udp://@0.0.0.0:11111')
 
         while True:
             ret, frame = cap.read()
             if ret:
-                cv2.imshow(num, frame)
+                cv2.imshow(self.wifi_adapter_ip, frame)
             
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
@@ -97,7 +104,7 @@ class myTello:
     #automatically turns stream on
     def start_video_thread(self):
         self.running = True
-        self.video_thread = Thread(target=self.receive_video, args=self.wifi_adapter_ip)
+        self.video_thread = Thread(target=self.receive_video)
         self.video_thread.start()
 
     def end(self):
