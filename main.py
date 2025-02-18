@@ -16,9 +16,10 @@ from customtello import myTello
 import path_planner
 import tello_tracking
 import collision
+import logging
 
 # Define the IP addresses of the two Wi-Fi adapters
-WIFI_ADAPTER_1_IP = "192.168.10.2"  # IP address of Wi-Fi Adapter 1 (connected to Drone 1)
+WIFI_ADAPTER_1_IP = "192.168.10.4"  # IP address of Wi-Fi Adapter 1 (connected to Drone 1)
 WIFI_ADAPTER_2_IP = "192.168.10.3"  # IP address of Wi-Fi Adapter 2 (connected to Drone 2)
 
 drone1 = myTello(WIFI_ADAPTER_1_IP)
@@ -81,10 +82,10 @@ def updateScreen():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False    
-        speedx1 = drone1.get_speed()
-        speedx2 = drone2.get_speed()
-        speedz1, startingyaw1 = drone1.get_AngularSpeed(startingyaw1, startingyaw2)
-        speedz2 , startingyaw2 =drone2.get_AngularSpeed(startingyaw1, startingyaw2)
+        speedx1 = 10
+        speedx2 = 10
+        speedz1  = drone1.get_AngularSpeed(startingyaw1)
+        speedz2 =drone2.get_AngularSpeed(startingyaw2)
 
         battery1 = drone1.getBattery()
         battery2 = drone2.getBattery()
@@ -269,13 +270,6 @@ drone_CV = tello_tracking.CV()
 drone_1_terminate = False
 drone_2_terminate = False
 
-#turn on drones cameras
-drone1.streamon()
-drone2.streamon()
-drone1.start_video_thread()
-drone2.start_video_thread()
-drone1.takeoff()
-drone2.takeoff()
 
 #how frequently the position is updated
 sleep_time = 0
@@ -367,9 +361,7 @@ def localize():
     #drone_thread.start()
 
     #updates the screen
-    screenThread = threading.Thread(target=updateScreen)
-    screenThread.start()
-
+   
     #delays for the takeoff time
     time.sleep(10)
     running = True
@@ -430,47 +422,71 @@ def localize():
 
 localizeThread = threading.Thread(target=localize)
 localizeThread.start()
+screenThread = threading.Thread(target=updateScreen)
+screenThread.start()
 
 
+#turn on drones cameras
+drone1.streamon()
+drone2.streamon()
+drone1.start_video_thread()
+drone2.start_video_thread()
+drone1.takeoff()
+drone2.takeoff()
 
 human_yes_2, human_yes_1 = False, False
 
-while not human_yes_1 and human_yes_2:
+while not human_yes_1 and not human_yes_2:
     #CV
     img1 = drone1.get_frame_read()
     img2 = drone2.get_frame_read()
     if img1 is not None:
-        turn_1 = drone_CV.center_subject(img1)
+        turn_1 = drone_CV.center_subject(img1, 1)
+        logging.debug("Processed frame")
+        if turn_1 == 1:
+            human_yes_1 = True
+            drone1.send_rc(0, 0, 0, 0)
+        elif turn_1 == 0:
+            drone1.send_rc(0, 0, 0, 10)
+        else:
+            drone1.send_rc(0, 0, 0, turn_1)
+    else:
+        logging.debug("no frame recieved")
+
     if img2 is not None:
-        turn_2 = drone_CV.center_subject(img2)
-    
-    # if human detected to be at the center
-    if turn_1 == 1:
-        human_yes_1 = True
-        drone1.send_rc(0, 0, 0, 0)
-    elif turn_1 == 0:
-        drone1.send_rc(0, 0, 0, 10)
+        turn_2 = drone_CV.center_subject(img2, 2)
+        logging.debug("Processed frame")
+         
+        # if human detected to be at the center
+        if turn_2 == 2:
+            human_yes_2 = True
+            drone2.send_rc(0, 0, 0, 0)
+        elif turn_2 == 0:
+            drone1.send_rc(0, 0, 0, 10)
+        else:
+            drone1.send_rc(0, 0, 0, turn_2)
     else:
-        drone1.send_rc(0, 0, 0, turn_1)
-    if turn_2 == 2:
-        human_yes_2 = True
-        drone2.send_rc(0, 0, 0, 0)
-    elif turn_2 == 0:
-        drone1.send_rc(0, 0, 0, 10)
-    else:
-        drone1.send_rc(0, 0, 0, turn_2)
+        logging.debug("no frame recieved")
+        
+   
 
 if intersection:
     drone2.send_rc(0, 0, 20, 0)
 
-while not drone_1_terminate and drone_2_terminate:
+while not drone_1_terminate and not drone_2_terminate:
 
     img1 = drone1.get_frame_read()
     img2 = drone2.get_frame_read()
     if img1 is not None:
-        turn_1, __ = drone_CV.center_subject(img1)
+        turn_1, __ = drone_CV.center_subject(img1, 1)
+        logging.debug("Processed frame")
+    else:
+        logging.debug("no frame recieved")
     if img2 is not None:
-        turn_2, __ = drone_CV.center_subject(img2)
+        turn_2, __ = drone_CV.center_subject(img2, 2)
+        logging.debug("Processed frame")
+    else:
+        logging.debug("no frame recieved")
     
     if iter == 0:
         sleep_time = 0 #do not update positions for the first loop
