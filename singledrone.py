@@ -19,7 +19,7 @@ import collision
 import logging
 
 # Define the IP addresses of the two Wi-Fi adapters
-WIFI_ADAPTER_1_IP = "192.168.10.4"  # IP address of Wi-Fi Adapter 1 (connected to Drone 1)
+WIFI_ADAPTER_1_IP = "192.168.10.2"  # IP address of Wi-Fi Adapter 1 (connected to Drone 1)
 
 drone1 = myTello(WIFI_ADAPTER_1_IP)
 
@@ -75,7 +75,7 @@ def updateScreen():
         height1 = drone1.getHeight()
 
         startMap.start_screen(battery1, speedx1, speedz1, height1, 0, 0, 0, 0)
-        sleep(1)
+        sleep(10)
 
 #creates a map of the environment on pygame
 pygame.init()
@@ -387,7 +387,7 @@ drone1.streamon()
 drone1.start_video_thread()
 drone1.takeoff()
 
-
+human_yes_1 = False
 while not human_yes_1:
     #CV
     img1 = drone1.get_frame_read()
@@ -404,9 +404,6 @@ while not human_yes_1:
     else:
         logging.debug("no frame recieved")
 
-   
-        
-   
 
 while not drone_1_terminate and not drone_2_terminate:
 

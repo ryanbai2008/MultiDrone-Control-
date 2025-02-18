@@ -94,7 +94,7 @@ def updateScreen():
         height2 = drone2.getHeight()
 
         startMap.start_screen(battery1, speedx1, speedz1, height1, battery2, speedx2, speedz2, height2)
-        sleep(1)
+        sleep(10)
 
 #creates a map of the environment on pygame
 pygame.init()

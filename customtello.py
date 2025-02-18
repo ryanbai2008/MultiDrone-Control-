@@ -195,9 +195,7 @@ class myTello:
         return speed_data
 
     def get_AngularSpeed(self, startingyaw):
-        imudata = self.get_command("attitude?")
-        #yawvalues = imudata.split()
-        currentyaw = 0#(yawvalues[0])
+        currentyaw = self.get_yaw()
 
         # Calculate the change in yaw
         yaw_difference = currentyaw - startingyaw
