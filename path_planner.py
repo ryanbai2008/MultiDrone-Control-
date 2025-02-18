@@ -1,44 +1,113 @@
-import math
+from djitellopy import Tello
+import cv2
+import time
+import tello_tracking
+import path_planner
+
+#path
+start_1_X, start_1_Y, end_1_X, end_1_Y = 120, 0, 0, -120
+path1 = [start_1_X, start_1_Y, end_1_X, end_1_Y]
+
+#drone current values
+drone_1_pos = [path1[0], path1[1], 0] #(X, Y, angle), STARTING ANGLE MUST BE 0 DEGREES
+
+#drone movement
+drone_1_movement = [0, 0, 0] #(delta X, delta Y, delta angle)
+
+#path planning and CV objects
+drone_1_path_plan = path_planner.PathPlan(path1[0], path1[2], path1[1], path1[3], drone_1_pos[2])
+drone_1_CV = tello_tracking.CV()
+
+#goal reached for drones?
+drone_1_terminate = False
+
+#turn on drone
+tello = Tello()
+tello.connect()
+tello.streamon()
+tello.takeoff()
+
+#timer for position updates
+sleep_time = 0
+timer = 0
+iter = 0
+
+#total time elapsed
+start_time = time.time()
+total_time = 0
+
+##############################
+##Drone initial orientation###
+##############################
+facing_human = False
+print(tello.get_battery())
+tello.send_rc_control(0, 0, 60, 0)
+while not facing_human:
+    #CV
+    img1 = tello.get_frame_read().frame
+    turn_1 = drone_1_CV.center_subject(img1, 1)
+
+    #turn
+    if turn_1 == 0: #if no human detected, continue turning
+        turn_1 = 10
+    elif turn_1 == 1: #human centered
+        facing_human = True
+        turn_1 = 0
+    tello.send_rc_control(0, 0, 0, turn_1)
+    time.sleep(0.1)
+
+print("\n\n\nnow moving paths\n\n\n")
+##############################
+#########Path Planning########
+##############################
+drone_1_pos = tello.get_yaw()
+
+while total_time < 15:
+    #update total time
+    total_time = time.time() - start_time
+
+    #CV
+    img1 = tello.get_frame_read().frame
+    turn_1 = drone_1_CV.center_subject(img1, 1)
+    if turn_1 == 1:
+      turn_1 = 0
+    
+    if iter == 0:
+        sleep_time = 0 #do not update positions for the first loop
+        iter += 1
+    else:
+        sleep_time = time.time() - timer
+    
+    if not drone_1_terminate:
+        print(f"updating position: {drone_1_pos}")
+        drone_1_pos[0] += drone_1_movement[0] * sleep_time
+        drone_1_pos[1] += drone_1_movement[1] * sleep_time
+        drone_1_pos[2] = tello.get_yaw()
+        # drone_1_pos[2] += turn_1 * sleep_time
+        # drone_1_pos[2] = drone_1_pos[2] % 360
+        print(f"updated  position: {drone_1_pos}")
+    else:
+        drone_1_pos[2] = tello.get_yaw()
+        # drone_1_pos[2] += turn_1 * sleep_time
+        # drone_1_pos[2] = drone_1_pos[2] % 360
+
+    #path planning
+    drone_1_movement = drone_1_path_plan.move_towards_goal(drone_1_pos[0], drone_1_pos[1], drone_1_pos[2], drone_1_terminate)
+    if drone_1_movement[0] == 0.1:
+        drone_1_terminate = True
+        print("\n\n\nnow stopping drone movement\n\n\n")
+        drone_1_movement[0], drone_1_movement[1] = 0, 0
+    
+    #move drone and update values, already considered if drone terminated
+    tello.send_rc_control(drone_1_movement[0], drone_1_movement[1], 0, turn_1)
+
+    timer = time.time() #time for keeping track of how much to update drones positions
 
 
-class PathPlan:
-    def __init__(self, X_start, X_goal, Y_start, Y_goal, angle_start):
-        self.X_start = X_start
-        self.X_goal = X_goal
-        self.Y_start = Y_start
-        self.Y_goal = Y_goal
-        self.angle_start = angle_start
-        self.original_magnitude_diff = math.sqrt((X_goal - X_start) ** 2 + (Y_goal - Y_start) ** 2)
 
-    def move_towards_goal(self, X_curr, Y_curr, angle_curr, terminate):
-        #skip if drone has already reached position
-        if terminate:
-            return [0, 0]
-        
-        #vectors
-        diff = [self.X_goal - X_curr, self.Y_goal - Y_curr]
-        direction_vector = [math.cos(math.radians(angle_curr)), math.sin(math.radians(angle_curr))]
 
-        #magnitudes
-        magnitude_diff = math.sqrt(diff[0] ** 2 + diff[1] ** 2)
-        magnitude_direction_vector = math.sqrt(direction_vector[0] ** 2 + direction_vector[1] ** 2)
-
-        #goal reached if within certain range of goal
-        if magnitude_diff / self.original_magnitude_diff < 0.05:
-            return [0.1, 0.1] 
-        
-        #if goal not reached, calculate movement neccesary to move one small step closer to goal
-        angle_diff_smaller = math.acos(math.radians((diff[0] * direction_vector[0] + diff[1] * direction_vector[1])/(magnitude_diff * magnitude_direction_vector))) #u.v/|u||v| = cos(theta), theta < 180
-        
-        #sign of Y_movement is always correct, but X_movement is not, change of basis to determine
-        X_movement = math.sin(math.radians(angle_diff_smaller)) * self.original_magnitude_diff * 0.4
-        Y_movement = math.cos(math.radians(angle_diff_smaller)) * self.original_magnitude_diff * 0.4 #change for smoother or less smooth path
-
-        #change of basis, row reduction to solve, done on paper & simplified on code for efficiency:
-        x, y = direction_vector
-        a, b = diff
-        n = (a * y - b * x) / (magnitude_direction_vector ** 2) #scalar for rightwards basis vector
-        if n < 0:
-            X_movement *= -1
-
-        return [int(X_movement), int(Y_movement)] #right, forward
+#clean up
+cv2.destroyAllWindows()
+tello.land()
+tello.streamoff()
+tello.end()
