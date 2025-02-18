@@ -224,6 +224,7 @@ if intersection:
     intersection = (intersectx, intersecty)
     collisiondetect = collision(path2[0], intersection, 500, 500)
     collisiondetect.get_vertex() 
+    intersection = True
 print(intersection)
 print(personpos)
 
@@ -447,6 +448,8 @@ while not human_yes_1 and human_yes_2:
     if human_yes_2:
         drone2.send_rc(0, 0, 0, 0)
 
+if intersection:
+    drone2.send_rc(0, 0, 20, 0)
 
 while not drone_1_terminate and drone_2_terminate:
 
@@ -477,6 +480,16 @@ while not drone_1_terminate and drone_2_terminate:
     else:
         drone_2_pos[2] += turn_left_2 * sleep_time
         drone_2_pos[2] = drone_2_pos[2] % 360
+
+    if intersection:
+        if(drone2.getHeight() >= drone1.getHeight() + 20):
+            drone2.send_rc(0, 0, -20, 0)
+            intersection1 = True
+            intersection = False
+            
+    if intersection1:
+        if(drone2.getHeight() == drone1.getHeight()):
+            drone2.send_rc(0, 0, 0, 0)
 
     #path planning
     drone_1_movement = drone_1_path_plan.move_towards_goal(drone_1_pos[0], drone_1_pos[1], drone_1_pos[2], drone_1_terminate)
