@@ -31,8 +31,8 @@ class PathPlan:
         angle_diff_smaller = math.acos(math.radians((diff[0] * direction_vector[0] + diff[1] * direction_vector[1])/(magnitude_diff * magnitude_direction_vector))) #u.v/|u||v| = cos(theta), theta < 180
         
         #sign of Y_movement is always correct, but X_movement is not, change of basis to determine
-        X_movement = math.sin(math.radians(angle_diff_smaller)) * self.original_magnitude_diff * 0.2
-        Y_movement = math.cos(math.radians(angle_diff_smaller)) * self.original_magnitude_diff * 0.2 #change for smoother or less smooth path
+        X_movement = math.sin(math.radians(angle_diff_smaller)) * self.original_magnitude_diff * 0.4
+        Y_movement = math.cos(math.radians(angle_diff_smaller)) * self.original_magnitude_diff * 0.4 #change for smoother or less smooth path
 
         #change of basis, row reduction to solve, done on paper & simplified on code for efficiency:
         x, y = direction_vector
