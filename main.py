@@ -493,54 +493,54 @@ while not drone_1_terminate and not drone_2_terminate:
         iter += 1
     else:
         sleep_time = time.time() - timer
-    
-    if not drone_1_terminate:
-        drone_1_pos[2] = drone1.get_yaw()
-        theta_x_component_1 = (drone_1_pos[2] - 90 * (drone_1_pos[0] > 0)) % 360
-        theta_y_component_1 = (drone_1_pos[2] + 180) % 360
-        delta_x_1 = abs(drone_1_movement[0]) * math.cos(math.radians(theta_x_component_1)) + abs(drone_1_movement[1]) * math.cos(math.radians(theta_y_component_1))
-        delta_y_1 = abs(drone_1_movement[0]) * math.sin(math.radians(theta_x_component_1)) + abs(drone_1_movement[1]) * math.sin(math.radians(theta_y_component_1))
-        drone_1_pos[0] += delta_x_1 * sleep_time
-        drone_1_pos[1] += delta_y_1 * sleep_time
-    else:
-        drone_1_pos[2] = drone1.get_yaw()
+    if img1 is not None:
+        if not drone_1_terminate:
+            drone_1_pos[2] = drone1.get_yaw()
+            theta_x_component_1 = (drone_1_pos[2] - 90 * (drone_1_pos[0] > 0)) % 360
+            theta_y_component_1 = (drone_1_pos[2] + 180) % 360
+            delta_x_1 = abs(drone_1_movement[0]) * math.cos(math.radians(theta_x_component_1)) + abs(drone_1_movement[1]) * math.cos(math.radians(theta_y_component_1))
+            delta_y_1 = abs(drone_1_movement[0]) * math.sin(math.radians(theta_x_component_1)) + abs(drone_1_movement[1]) * math.sin(math.radians(theta_y_component_1))
+            drone_1_pos[0] += delta_x_1 * sleep_time
+            drone_1_pos[1] += delta_y_1 * sleep_time
+        else:
+            drone_1_pos[2] = drone1.get_yaw()
+    if img2 is not None:
+        if not drone_2_terminate:   
+            drone_2_pos[2] = drone2.get_yaw()
+            theta_x_component_2 = (drone_2_pos[2] - 90 * (drone_2_pos[0] > 0)) % 360
+            theta_y_component_2 = (drone_2_pos[2] + 180) % 360
+            delta_x_2 = abs(drone_2_movement[0]) * math.cos(math.radians(theta_x_component_2)) + abs(drone_2_movement[1]) * math.cos(math.radians(theta_y_component_2))
+            delta_y_2 = abs(drone_2_movement[0]) * math.sin(math.radians(theta_x_component_2)) + abs(drone_2_movement[1]) * math.sin(math.radians(theta_y_component_2))
+            drone_2_pos[0] += delta_x_2 * sleep_time
+            drone_2_pos[1] += delta_y_2 * sleep_time
+        else:
+            drone_2_pos[2] = drone2.get_yaw()
 
-    if not drone_2_terminate:   
-        drone_2_pos[2] = drone2.get_yaw()
-        theta_x_component_2 = (drone_2_pos[2] - 90 * (drone_2_pos[0] > 0)) % 360
-        theta_y_component_2 = (drone_2_pos[2] + 180) % 360
-        delta_x_2 = abs(drone_2_movement[0]) * math.cos(math.radians(theta_x_component_2)) + abs(drone_2_movement[1]) * math.cos(math.radians(theta_y_component_2))
-        delta_y_2 = abs(drone_2_movement[0]) * math.sin(math.radians(theta_x_component_2)) + abs(drone_2_movement[1]) * math.sin(math.radians(theta_y_component_2))
-        drone_2_pos[0] += delta_x_2 * sleep_time
-        drone_2_pos[1] += delta_y_2 * sleep_time
-    else:
-        drone_2_pos[2] = drone2.get_yaw()
+            if intersection:
+                if(drone2.getHeight() >= drone1.getHeight() + 20):
+                    drone2.send_rc(0, 0, -20, 0)
+                    intersection1 = True
+                    intersection = False
+                    
+            if intersection1:
+                if(drone2.getHeight() == drone1.getHeight()):
+                    drone2.send_rc(0, 0, 0, 0)
 
-        if intersection:
-            if(drone2.getHeight() >= drone1.getHeight() + 20):
-                drone2.send_rc(0, 0, -20, 0)
-                intersection1 = True
-                intersection = False
-                
-        if intersection1:
-            if(drone2.getHeight() == drone1.getHeight()):
-                drone2.send_rc(0, 0, 0, 0)
+            #path planning
+            drone_1_movement = drone_1_path_plan.move_towards_goal(drone_1_pos[0], drone_1_pos[1], drone_1_pos[2], drone_1_terminate)
+            drone_2_movement = drone_2_path_plan.move_towards_goal(drone_2_pos[0], drone_2_pos[1], drone_2_pos[2], drone_2_terminate)
+            if drone_1_movement[0] == 0.1:
+                drone_1_terminate = True
+                drone_1_movement[0], drone_1_movement[1] = 0, 0
+            if drone_2_movement[0] == 0.1:
+                drone_2_terminate = True
+                drone_2_movement[0], drone_2_movement[1] = 0, 0
+            
+            #move drone
+            drone1.send_rc(drone_1_movement[0], drone_1_movement[1], 0, turn_1)
+            drone2.send_rc(drone_2_movement[0], drone_2_movement[1], 0, turn_2)
 
-        #path planning
-        drone_1_movement = drone_1_path_plan.move_towards_goal(drone_1_pos[0], drone_1_pos[1], drone_1_pos[2], drone_1_terminate)
-        drone_2_movement = drone_2_path_plan.move_towards_goal(drone_2_pos[0], drone_2_pos[1], drone_2_pos[2], drone_2_terminate)
-        if drone_1_movement[0] == 0.1:
-            drone_1_terminate = True
-            drone_1_movement[0], drone_1_movement[1] = 0, 0
-        if drone_2_movement[0] == 0.1:
-            drone_2_terminate = True
-            drone_2_movement[0], drone_2_movement[1] = 0, 0
-        
-        #move drone
-        drone1.send_rc(drone_1_movement[0], drone_1_movement[1], 0, turn_1)
-        drone2.send_rc(drone_2_movement[0], drone_2_movement[1], 0, turn_2)
-
-        timer = time.time()
+            timer = time.time()
 
 drone1.land()
 drone2.land()

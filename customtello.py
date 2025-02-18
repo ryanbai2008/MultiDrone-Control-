@@ -155,7 +155,7 @@ class myTello:
     def rotateCW(self, angle):
         self.send_command(f'cw {abs(angle)}')
 
-    def getYaw(self):
+    def get_yaw(self):
         imudata = self.get_command("attitude?")
         yawvalues = imudata.split()
         currentyaw = yawvalues[0]
