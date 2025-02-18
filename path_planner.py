@@ -24,8 +24,8 @@ class PathPlan:
         if magnitude_diff / self.original_magnitude_diff < 0.05:
             return ["goal_reached", "goal_reached"] 
         angle_diff_smaller = math.acos(math.radians((diff[0] * direction_vector[0] + diff[1] * direction_vector[1])/(magnitude_diff * magnitude_direction_vector)))
-        X_movement = math.sin(math.radians(angle_diff_smaller)) * magnitude_direction_vector * 0.001
-        Y_movement = math.cos(math.radians(angle_diff_smaller)) * magnitude_direction_vector * 0.001 #change for smoother path
+        X_movement = math.sin(math.radians(angle_diff_smaller)) * self.original_magnitude_diff * 0.3
+        Y_movement = math.cos(math.radians(angle_diff_smaller)) * self.original_magnitude_diff * 0.3 #change for smoother path
         return [X_movement, Y_movement]
         # diff_X_curr, diff_Y_curr = self.X_goal - X_curr, self.Y_goal - Y_curr
         # if abs(diff_angle_curr / self.diff_angle_init) < 0.1: #if angle is within certain range of goal, terminate rotation

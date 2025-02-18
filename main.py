@@ -70,6 +70,8 @@ battery2 = drone2.getBattery()
 height1 = drone1.getHeight()
 height2 = drone2.getHeight()
 
+print(battery1)
+print(battery2)
 
 def updateScreen():
     startingyaw1 = 0
@@ -93,11 +95,6 @@ def updateScreen():
         startMap.start_screen(battery1, speedx1, speedz1, height1, battery2, speedx2, speedz2, height2)
         sleep(1)
 
-
-#Before takeoff, must faced the drone in the direction that the map faces (Face it upward on the map)
-#control the drone with keyboard, initiates the keyboard
-#kp.init()
-
 #creates a map of the environment on pygame
 pygame.init()
 screen = pygame.display.set_mode([864, 586])
@@ -105,14 +102,17 @@ screen_width, screen_height = pygame.display.get_surface().get_size()
 pygame.display.set_caption("Path Planning with Map (BRViz)")
 screen.fill((255, 255, 255))
 
-'''
-speedx1, speedx2 = get_speed()
-speedz1, speedz2, startingyaw1, startingyaw2 = get_AngularSpeed(0, 0)
-battery1, battery2 = get_battery()
-height1, height2 = getHeight()
-'''
+speedx1 = drone1.get_speed()
+speedx2 = drone2.get_speed()
+speedz1 = drone1.get_AngularSpeed(0)
+speedz2 = drone2.get_AngularSpeed(0)
+battery1 = drone1.getBattery()
+battery2 = drone2.getBattery()
+height1 = drone1.getHeight()
+height2 = drone2.getHeight()
+
 isRunning = True
-sizeCoeff = 200/42 # actual distance/pixel distance in cm (CHANGE THIS VALUE IF YOUR CHANGING THE MAP)
+sizeCoeff = 400/42 # actual distance/pixel distance in cm (CHANGE THIS VALUE IF YOUR CHANGING THE MAP)
 
 def scaleImgDown(img, scale_factor):
     original_width, original_height = img.get_size()
@@ -122,7 +122,7 @@ def scaleImgDown(img, scale_factor):
     return img
 
 startMap = map.initializeMap(screen, "Make Drone 1 Path")
-#startMap.start_screen(battery1, speedx1, speedz1, height1, battery2, speedx2, speedz2, height2)
+startMap.start_screen(battery1, speedx1, speedz1, height1, battery2, speedx2, speedz2, height2)
 
 #DRONE 1 MAPPING
 map1 = map.mapStart(sizeCoeff, screen, Background('mymap.png', [0, 105], 0.7))
@@ -138,7 +138,7 @@ path1img = screen.subsurface(saveImg).copy()
 pygame.image.save(path1img, "pathPlanned.png") #Saves new background with path
 
 startMap.changeInstruction("Make Drone 2 Path")
-#startMap.start_screen(battery1, speedx1, speedz1, height1, battery2, speedx2, speedz2, height2)
+startMap.start_screen(battery1, speedx1, speedz1, height1, battery2, speedx2, speedz2, height2)
 
 #DRONE 2 Mapping
 map2 = map.mapStart(sizeCoeff, screen, Background('pathPlanned.png', [0, 105], 1))
@@ -148,26 +148,15 @@ pygame.draw.line(screen, (0, 0, 0), path2[1], path2[2], 6) #creates a line as th
 pygame.draw.circle(screen, (0, 0, 255), path2[1], 5) #To note where the nodes are
 pygame.draw.circle(screen, (0, 0, 255), path2[2], 5) #To note where the nodes are
 
-#startMap.start_screen(battery1, speedx1, speedz1, height1, battery2, speedx2, speedz2, height2)
+startMap.start_screen(battery1, speedx1, speedz1, height1, battery2, speedx2, speedz2, height2)
 pygame.display.update()
 
 personx, persony, personpospx = map2.addPerson(sizeCoeff)
 personpos = (personx, persony)
 
-#In pixel values for radius and in degrees, also personpospx is assumed to be the center of the circle
-#radius1, omega = map2.add_circular_pattern(path, personpospx)
-#radius2, omega2 = map2.add_circular_pattern(path2, personpospx)
-#print(radius1)
-#print(radius2)
-#print(omega)
-#print(omega2)
-
-#omega = -omega
-#omega2 = -omega2
-
 print("HELLO")
 startMap.changeInstruction("Moving Drones...")
-#startMap.start_screen(battery1, speedx1, speedz1, height1, battery2, speedx2, speedz2, height2)
+startMap.start_screen(battery1, speedx1, speedz1, height1, battery2, speedx2, speedz2, height2)
 
 print(angle)
 print(distanceInCm)
@@ -452,8 +441,8 @@ drone_thread = threading.Thread(target=move_tello, args={distanceInCm, distanceI
 drone_thread.start()
 
 #updates the screen
-#screenThread = threading.Thread(target=updateScreen)
-#screenThread.start()
+screenThread = threading.Thread(target=updateScreen)
+screenThread.start()
 
 #delays for the takeoff time
 time.sleep(3)

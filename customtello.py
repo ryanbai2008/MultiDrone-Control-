@@ -74,13 +74,13 @@ class myTello:
         self.send_command("streamoff")
 
     # Function to decode and display the video stream
-    def receive_video(self):
+    def receive_video(self, num):
         cap = cv2.VideoCapture('udp://@0.0.0.0:11111')
 
         while True:
             ret, frame = cap.read()
             if ret:
-                cv2.imshow('Tello Stream', frame)
+                cv2.imshow(num, frame)
             
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
@@ -97,7 +97,7 @@ class myTello:
     #automatically turns stream on
     def start_video_thread(self):
         self.running = True
-        self.video_thread = Thread(target=self.receive_video)
+        self.video_thread = Thread(target=self.receive_video, args=self.wifi_adapter_ip)
         self.video_thread.start()
 
     def end(self):
@@ -175,4 +175,4 @@ class myTello:
             yaw_difference += 360
         angular_speed1 = yaw_difference / 1  
         
-        return angular_speed1, currentyaw
+        return angular_speed1
