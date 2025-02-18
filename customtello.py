@@ -87,7 +87,9 @@ class myTello:
         while True:
             ret, frame = cap.read()
             if ret:
-                cv2.imshow(self.wifi_adapter_ip, frame)
+                with self.frame_lock:
+                    self.frame = frame
+                #cv2.imshow(self.wifi_adapter_ip, self.frame)
             
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
@@ -96,7 +98,8 @@ class myTello:
         cv2.destroyAllWindows()
 
     def get_frame_read(self):
-        return self.frame
+        with self.frame_lock:
+            return self.frame
     
     def emergency(self):
         self.send_command("emergency")
