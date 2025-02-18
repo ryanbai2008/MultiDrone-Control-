@@ -4,6 +4,7 @@ from threading import Thread, Lock
 import cv2
 import numpy as np
 import logging
+import re
 
 #set up logging
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -21,6 +22,7 @@ class myTello:
         self.frame_lock = Lock()
         self.video_thread = None
         self.running = False
+        self.stop_video = False
 
         # Initialize and bind the UDP socket
     def init_socket(self):
@@ -85,6 +87,9 @@ class myTello:
         cap = cv2.VideoCapture('udp://@0.0.0.0:11111')
 
         while True:
+            if self.stop_video:  # Check if the video stream should stop
+                break
+
             ret, frame = cap.read()
             if ret:
                 with self.frame_lock:
@@ -100,6 +105,9 @@ class myTello:
     def get_frame_read(self):
         with self.frame_lock:
             return self.frame
+        
+    def stop_video_stream(self):
+        self.stop_video = True
     
     def emergency(self):
         self.send_command("emergency")
@@ -112,9 +120,12 @@ class myTello:
 
     def end(self):
         self.running = False
+        self.stop_video_stream()  # Stop the video stream before ending
         if self.video_thread is not None:
             self.video_thread.join()
         self.sock.close()
+        time.sleep(2)
+        self.connect()
 
     def moveForward(self, distance):
         # Move drones forward
@@ -148,6 +159,8 @@ class myTello:
         # Land both drones
         self.send_command("land")
         self.sock.close()
+        time.sleep(2)
+        self.connect()
 
     def rotateCCW(self, angle):
         self.send_command(f'ccw {abs(angle)}')
@@ -157,10 +170,15 @@ class myTello:
 
     def get_yaw(self):
         imudata = self.get_command("attitude?")
-        yawvalues = imudata.split()
-        currentyaw = yawvalues[0]
-        return currentyaw
+        print(imudata)
+        match = re.search(r'yaw:\s*(-?\d+\.?\d*)', imudata)
 
+        if match:
+            # Extract and return the yaw value from the matched group
+            current_yaw = float(match.group(1))  # The captured yaw value
+            logging.info(f"Current Yaw: {current_yaw}")
+            return current_yaw
+       
         # Calculate the change in yaw
 
     def getBattery(self):
