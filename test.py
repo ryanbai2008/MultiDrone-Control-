@@ -21,14 +21,21 @@ drone.streamon()
 drone.start_video_thread()
 print(drone.get_yaw())
 print(drone.get_speed())
-
 human_yes_1 = False
-while not human_yes_1:
-    img1 = drone.get_frame_read()
-    if img1 is not None:
-        turn1 = drone_CV.center_subject(img1, 1)  
-        logging.debug("Processed frame")
-    else:
-        logging.debug("no frame recieved")
 
-        
+try:
+    while not human_yes_1:
+        img1 = drone.get_frame_read()
+        if img1 is not None:
+            turn1 = drone_CV.center_subject(img1, 1)
+            logging.debug("Processed frame")
+        else:
+            logging.debug("No frame received")
+except KeyboardInterrupt:
+    # Gracefully exit when Ctrl+C is pressed
+    print("Exiting program...")
+finally:
+    # Ensure that resources are cleaned up when exiting
+    drone.stop_video_stream()  # Stop video stream if it's running
+    drone.end()  # Properly shut down the drone connection
+    print("Program exited cleanly.")

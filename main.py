@@ -434,6 +434,8 @@ drone2.start_video_thread()
 drone1.takeoff()
 drone2.takeoff()
 
+drone1.connect()
+drone2.connect()
 human_yes_2, human_yes_1 = False, False
 
 while not human_yes_1 and not human_yes_2:
