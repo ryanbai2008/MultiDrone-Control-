@@ -280,8 +280,6 @@ drone_1_terminate = False
 drone_2_terminate = False
 
 #turn on drones cameras
-drone1.connect()
-drone2.connect()
 drone1.streamon()
 drone2.streamon()
 drone1.start_video_thread()
@@ -294,7 +292,7 @@ sleep_time = 0
 timer = 0
 iter = 0
 
-'''
+
 drone1.send_rc(0, 0, 0, 30)
 drone2.send_rc(0, 0, 0, 30)
 human_yes_2, human_yes_1 = False, False
@@ -368,7 +366,7 @@ drone1.streamoff()
 drone2.streamoff()
 drone1.end()
 drone2.end()
-'''
+
 def drawPoints(screen, points, droneimg, yaw):
     font = pygame.font.SysFont('Times',25)
     
