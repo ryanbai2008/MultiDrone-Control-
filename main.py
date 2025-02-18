@@ -371,7 +371,7 @@ def localize():
     screenThread.start()
 
     #delays for the takeoff time
-    time.sleep(3)
+    time.sleep(10)
     running = True
     while running:
         for event in pygame.event.get():
@@ -439,8 +439,10 @@ while not human_yes_1 and human_yes_2:
     #CV
     img1 = drone1.get_frame_read()
     img2 = drone2.get_frame_read()
-    turn_1 = drone_CV.center_subject(img1)
-    turn_2 = drone_CV.center_subject(img2)
+    if img1 is not None:
+        turn_1 = drone_CV.center_subject(img1)
+    if img2 is not None:
+        turn_2 = drone_CV.center_subject(img2)
     
     # if human detected to be at the center
     if turn_1 == 1:
@@ -465,8 +467,10 @@ while not drone_1_terminate and drone_2_terminate:
 
     img1 = drone1.get_frame_read()
     img2 = drone2.get_frame_read()
-    turn_1, __ = drone_CV.center_subject(img1)
-    turn_2, __ = drone_CV.center_subject(img2)
+    if img1 is not None:
+        turn_1, __ = drone_CV.center_subject(img1)
+    if img2 is not None:
+        turn_2, __ = drone_CV.center_subject(img2)
     
     if iter == 0:
         sleep_time = 0 #do not update positions for the first loop
