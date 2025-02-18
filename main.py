@@ -432,21 +432,31 @@ localizeThread = threading.Thread(target=localize)
 localizeThread.start()
 
 
-drone1.send_rc(0, 0, 0, 30)
-drone2.send_rc(0, 0, 0, 30)
+
 human_yes_2, human_yes_1 = False, False
+
 while not human_yes_1 and human_yes_2:
+    #CV
     img1 = drone1.get_frame_read()
     img2 = drone2.get_frame_read()
-    drone_CV.center_subject(img1)
-    turn_left_1, human_yes_1 = drone_CV.center_subject(img1)
-    turn_left_2, human_yes_2 = drone_CV.center_subject(img2)
-    print(human_yes_1)
-    print(human_yes_2)
-    if human_yes_1:
+    turn_1 = drone_CV.center_subject(img1)
+    turn_2 = drone_CV.center_subject(img2)
+    
+    # if human detected to be at the center
+    if turn_1 == 1:
+        human_yes_1 = True
         drone1.send_rc(0, 0, 0, 0)
-    if human_yes_2:
+    elif turn_1 == 0:
+        drone1.send_rc(0, 0, 0, 10)
+    else:
+        drone1.send_rc(0, 0, 0, turn_1)
+    if turn_2 == 2:
+        human_yes_2 = True
         drone2.send_rc(0, 0, 0, 0)
+    elif turn_2 == 0:
+        drone1.send_rc(0, 0, 0, 10)
+    else:
+        drone1.send_rc(0, 0, 0, turn_2)
 
 if intersection:
     drone2.send_rc(0, 0, 20, 0)
@@ -455,30 +465,30 @@ while not drone_1_terminate and drone_2_terminate:
 
     img1 = drone1.get_frame_read()
     img2 = drone2.get_frame_read()
-    turn_left_1, __ = drone_CV.center_subject(img1)
-    turn_left_2, __ = drone_CV.center_subject(img2)
+    turn_1, __ = drone_CV.center_subject(img1)
+    turn_2, __ = drone_CV.center_subject(img2)
     
     if iter == 0:
         sleep_time = 0 #do not update positions for the first loop
-    else:
         iter += 1
+    else:
         sleep_time = time.time() - timer
     
     if not drone_1_terminate:
         drone_1_pos[0] += drone_1_movement[0] * sleep_time
         drone_1_pos[1] += drone_1_movement[1] * sleep_time
-        drone_1_pos[2] += turn_left_1 * sleep_time
+        drone_1_pos[2] += turn_1 * sleep_time
         drone_1_pos[2] = drone_1_pos[2] % 360
     else:
-        drone_1_pos[2] += turn_left_1 * sleep_time
+        drone_1_pos[2] += turn_1 * sleep_time
         drone_1_pos[2] = drone_1_pos[2] % 360
     if not drone_2_terminate:   
         drone_2_pos[0] += drone_2_movement[0] * sleep_time
         drone_2_pos[1] += drone_2_movement[1] * sleep_time
-        drone_2_pos[2] += turn_left_2 * sleep_time
+        drone_2_pos[2] += turn_2 * sleep_time
         drone_2_pos[2] = drone_2_pos[2] % 360
     else:
-        drone_2_pos[2] += turn_left_2 * sleep_time
+        drone_2_pos[2] += turn_2 * sleep_time
         drone_2_pos[2] = drone_2_pos[2] % 360
 
     if intersection:
@@ -494,22 +504,18 @@ while not drone_1_terminate and drone_2_terminate:
     #path planning
     drone_1_movement = drone_1_path_plan.move_towards_goal(drone_1_pos[0], drone_1_pos[1], drone_1_pos[2], drone_1_terminate)
     drone_2_movement = drone_2_path_plan.move_towards_goal(drone_2_pos[0], drone_2_pos[1], drone_2_pos[2], drone_2_terminate)
-    if drone_1_movement[0] == "goal_reached":
+    if drone_1_movement[0] == 0.1:
         drone_1_terminate = True
-    if drone_2_movement[0] == "goal_reached":
+        drone_1_movement[0], drone_1_movement[1] = 0, 0
+    if drone_2_movement[0] == 0.1:
         drone_2_terminate = True
+        drone_2_movement[0], drone_2_movement[1] = 0, 0
     
-    #move drone and update values, consider if drone terminated
-    if not drone_1_terminate:
-        drone1.send_rc(drone_1_movement[0], drone_1_movement[1], 0, turn_left_1)
-    else:
-        drone1.sendrc(0, 0, 0, turn_left_1)
+    #move drone
+    drone1.send_rc(drone_1_movement[0], drone_1_movement[1], 0, turn_1)
+    drone2.send_rc(drone_2_movement[0], drone_2_movement[1], 0, turn_2)
 
-    if not drone_2_terminate:   
-        drone2.send_rc(drone_2_movement[0], drone_2_movement[1], 0, turn_left_2)
-    else:
-        drone2.send_rc(0, 0, 0, turn_left_2)
-    timer = time.time() ###########figure out timing######################
+    timer = time.time()
 
 drone1.land()
 drone2.land()
