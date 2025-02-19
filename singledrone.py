@@ -387,7 +387,9 @@ drone1.streamon()
 drone1.start_video_thread()
 drone1.takeoff()
 
+
 human_yes_1 = False
+
 while not human_yes_1:
     #CV
     img1 = drone1.get_frame_read()
@@ -403,9 +405,10 @@ while not human_yes_1:
             drone1.send_rc(0, 0, 0, turn_1)
     else:
         logging.debug("no frame recieved")
+        
+   
 
-
-while not drone_1_terminate and not drone_2_terminate:
+while not drone_1_terminate:
 
     img1 = drone1.get_frame_read()
     if img1 is not None:
@@ -413,7 +416,7 @@ while not drone_1_terminate and not drone_2_terminate:
         logging.debug("Processed frame")
     else:
         logging.debug("no frame recieved")
-   
+    
     if iter == 0:
         sleep_time = 0 #do not update positions for the first loop
         iter += 1
@@ -426,12 +429,12 @@ while not drone_1_terminate and not drone_2_terminate:
             theta_y_component_1 = (drone_1_pos[2] + 180) % 360
             delta_x_1 = abs(drone_1_movement[0]) * math.cos(math.radians(theta_x_component_1)) + abs(drone_1_movement[1]) * math.cos(math.radians(theta_y_component_1))
             delta_y_1 = abs(drone_1_movement[0]) * math.sin(math.radians(theta_x_component_1)) + abs(drone_1_movement[1]) * math.sin(math.radians(theta_y_component_1))
-            drone_1_pos[0] += delta_x_1 * sleep_time
-            drone_1_pos[1] += delta_y_1 * sleep_time
+            drone_1_pos[0] -= delta_x_1 * sleep_time
+            drone_1_pos[1] -= delta_y_1 * sleep_time
         else:
             drone_1_pos[2] = drone1.get_yaw()
-
-         
+            print(drone1.get_yaw())
+   
             #path planning
             drone_1_movement = drone_1_path_plan.move_towards_goal(drone_1_pos[0], drone_1_pos[1], drone_1_pos[2], drone_1_terminate)
             if drone_1_movement[0] == 0.1:
@@ -443,6 +446,7 @@ while not drone_1_terminate and not drone_2_terminate:
             drone1.send_rc(drone_1_movement[0], drone_1_movement[1], 0, turn_1)
 
             timer = time.time()
+
 
 drone1.land()
 drone1.streamoff()

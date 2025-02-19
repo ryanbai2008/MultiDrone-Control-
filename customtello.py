@@ -24,19 +24,19 @@ class myTello:
         self.running = False
         self.stop_video = False
 
-        # Initialize and bind the UDP socket
+    # Initialize and bind the UDP socket
     def init_socket(self):
-        if self.sock:
-            self.sock.close()
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        try:
-            self.sock.bind((self.wifi_adapter_ip, 0))
-        except Exception as e:
-            logging.error(f"Bind failed: {e}")
-            exit()
-        # Get the port that was automatically selected
-        self.host, self.port = self.sock.getsockname()
-        logging.info(f"Socket bound to {self.host}:{self.port}")
+        if not self.sock:
+            self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            try:
+                self.sock.bind((self.wifi_adapter_ip, 0))
+            except Exception as e:
+                logging.error(f"Bind failed: {e}")
+                exit()
+            self.host, self.port = self.sock.getsockname()
+            logging.info(f"Socket bound to {self.host}:{self.port}")
+        else:
+            logging.info("Socket already initialized")
 
     # Function to send command to Tello drone
     def send_command(self, command, retries=5):
@@ -69,7 +69,8 @@ class myTello:
         return None
     
     def connect(self):
-        self.init_socket()  # Initialize and bind socket
+        if self.sock is None:
+            self.init_socket()
         # Connect to the drones by sending the 'command' mode
         self.send_command("command")
 
@@ -120,12 +121,13 @@ class myTello:
 
     def end(self):
         self.running = False
-        self.stop_video_stream()  # Stop the video stream before ending
+        self.stop_video_stream()  # stop video stream 
         if self.video_thread is not None:
             self.video_thread.join()
-        self.sock.close()
-        time.sleep(2)
-        self.connect()
+        if self.sock:
+            self.sock.close()
+            self.sock = None  #  reset the socket
+        logging.info("Disconnected from drone")
 
     def moveForward(self, distance):
         # Move drones forward
@@ -183,19 +185,48 @@ class myTello:
 
     def getBattery(self):
         battery = self.get_command("battery?")
-        return battery
+
+        try:
+            match = re.search(r'\d+', battery)
+            if match:
+                return int(match.group())
+            else:
+                logging.error(f"Could not parse battery from response: {battery}")
+                return None
+        except Exception as e:
+            logging.error(f"Error parsing battery: {e}")
+            return None
 
 
     def getHeight(self):
         height = self.get_command("height?")
-        return height
+
+        try:
+            match = re.search(r'\d+', height)
+            if match:
+                return int(match.group())
+            else:
+                logging.error(f"Could not parse height from response: {height}")
+                return None
+        except Exception as e:
+            logging.error(f"Error parsing height: {e}")
+            return None
     
     def get_speed(self):
         speed_data = self.get_command("speed?")
-        return speed_data
-
+        try:
+            match = re.search(r'\d+', speed_data)
+            if match:
+                return int(match.group())
+            else:
+                logging.error(f"Could not parse speed from response: {speed_data}")
+                return None
+        except Exception as e:
+            logging.error(f"Error parsing speed: {e}")
+            return None
+        
     def get_AngularSpeed(self, startingyaw):
-        currentyaw = self.get_yaw()
+        currentyaw = 0
 
         # Calculate the change in yaw
         yaw_difference = currentyaw - startingyaw

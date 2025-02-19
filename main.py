@@ -264,7 +264,8 @@ drone_2_movement = [0, 0]
 #path planning objects and CV objects
 drone_1_path_plan = path_planner.PathPlan(start_pos1X, end_pos1X, start_pos1Y, end_pos1Y, drone_1_pos[2]) #########place both drones facing to the right facing horizontally
 drone_2_path_plan = path_planner.PathPlan(start_pos2X, end_pos2X, start_pos2Y, end_pos2Y, drone_2_pos[2])
-drone_CV = tello_tracking.CV()
+drone1_CV = tello_tracking.CV()
+drone2_CV = tello_tracking.CV()
 
 #has goal been reached for drones
 drone_1_terminate = False
@@ -424,129 +425,131 @@ localizeThread = threading.Thread(target=localize)
 localizeThread.start()
 screenThread = threading.Thread(target=updateScreen)
 screenThread.start()
+try:
+    #turn on drones cameras
+    drone1.streamon()
+    drone2.streamon()
+    drone1.start_video_thread()
+    drone2.start_video_thread()
+    drone1.takeoff()
+    drone2.takeoff()
 
+    human_yes_2, human_yes_1 = False, False
 
-#turn on drones cameras
-drone1.streamon()
-drone2.streamon()
-drone1.start_video_thread()
-drone2.start_video_thread()
-drone1.takeoff()
-drone2.takeoff()
-
-drone1.connect()
-drone2.connect()
-human_yes_2, human_yes_1 = False, False
-
-while not human_yes_1 and not human_yes_2:
-    #CV
-    img1 = drone1.get_frame_read()
-    img2 = drone2.get_frame_read()
-    if img1 is not None:
-        turn_1 = drone_CV.center_subject(img1, 1)
-        logging.debug("Processed frame")
-        if turn_1 == 1:
-            human_yes_1 = True
-            drone1.send_rc(0, 0, 0, 0)
-        elif turn_1 == 0:
-            drone1.send_rc(0, 0, 0, 10)
+    while (not human_yes_1) and (not human_yes_2):
+        #CV
+        img1 = drone1.get_frame_read()
+        img2 = drone2.get_frame_read()
+        if img1 is not None:
+            turn_1 = drone1_CV.center_subject(img1, 1)
+            logging.debug("Processed frame")
+            if turn_1 == 1:
+                human_yes_1 = True
+                drone1.send_rc(0, 0, 0, 0)
+            else:
+                drone1.send_rc(0, 0, 0, turn_1)
         else:
-            drone1.send_rc(0, 0, 0, turn_1)
-    else:
-        logging.debug("no frame recieved")
+            logging.debug("no frame recieved")
 
-    if img2 is not None:
-        turn_2 = drone_CV.center_subject(img2, 2)
-        logging.debug("Processed frame")
-         
-        # if human detected to be at the center
-        if turn_2 == 2:
-            human_yes_2 = True
-            drone2.send_rc(0, 0, 0, 0)
-        elif turn_2 == 0:
-            drone1.send_rc(0, 0, 0, 10)
-        else:
-            drone1.send_rc(0, 0, 0, turn_2)
-    else:
-        logging.debug("no frame recieved")
-        
-   
-
-if intersection:
-    drone2.send_rc(0, 0, 20, 0)
-
-while not drone_1_terminate and not drone_2_terminate:
-
-    img1 = drone1.get_frame_read()
-    img2 = drone2.get_frame_read()
-    if img1 is not None:
-        turn_1, __ = drone_CV.center_subject(img1, 1)
-        logging.debug("Processed frame")
-    else:
-        logging.debug("no frame recieved")
-    if img2 is not None:
-        turn_2, __ = drone_CV.center_subject(img2, 2)
-        logging.debug("Processed frame")
-    else:
-        logging.debug("no frame recieved")
-    
-    if iter == 0:
-        sleep_time = 0 #do not update positions for the first loop
-        iter += 1
-    else:
-        sleep_time = time.time() - timer
-    if img1 is not None:
-        if not drone_1_terminate:
-            drone_1_pos[2] = drone1.get_yaw()
-            theta_x_component_1 = (drone_1_pos[2] - 90 * (drone_1_pos[0] > 0)) % 360
-            theta_y_component_1 = (drone_1_pos[2] + 180) % 360
-            delta_x_1 = abs(drone_1_movement[0]) * math.cos(math.radians(theta_x_component_1)) + abs(drone_1_movement[1]) * math.cos(math.radians(theta_y_component_1))
-            delta_y_1 = abs(drone_1_movement[0]) * math.sin(math.radians(theta_x_component_1)) + abs(drone_1_movement[1]) * math.sin(math.radians(theta_y_component_1))
-            drone_1_pos[0] -= delta_x_1 * sleep_time
-            drone_1_pos[1] -= delta_y_1 * sleep_time
-        else:
-            drone_1_pos[2] = drone1.get_yaw()
-    if img2 is not None:
-        if not drone_2_terminate:   
-            drone_2_pos[2] = drone2.get_yaw()
-            theta_x_component_2 = (drone_2_pos[2] - 90 * (drone_2_pos[0] > 0)) % 360
-            theta_y_component_2 = (drone_2_pos[2] + 180) % 360
-            delta_x_2 = abs(drone_2_movement[0]) * math.cos(math.radians(theta_x_component_2)) + abs(drone_2_movement[1]) * math.cos(math.radians(theta_y_component_2))
-            delta_y_2 = abs(drone_2_movement[0]) * math.sin(math.radians(theta_x_component_2)) + abs(drone_2_movement[1]) * math.sin(math.radians(theta_y_component_2))
-            drone_2_pos[0] -= delta_x_2 * sleep_time
-            drone_2_pos[1] -= delta_y_2 * sleep_time
-        else:
-            drone_2_pos[2] = drone2.get_yaw()
-
-            if intersection:
-                if(drone2.getHeight() >= drone1.getHeight() + 20):
-                    drone2.send_rc(0, 0, -20, 0)
-                    intersection1 = True
-                    intersection = False
-                    
-            if intersection1:
-                if(drone2.getHeight() == drone1.getHeight()):
-                    drone2.send_rc(0, 0, 0, 0)
-
-            #path planning
-            drone_1_movement = drone_1_path_plan.move_towards_goal(drone_1_pos[0], drone_1_pos[1], drone_1_pos[2], drone_1_terminate)
-            drone_2_movement = drone_2_path_plan.move_towards_goal(drone_2_pos[0], drone_2_pos[1], drone_2_pos[2], drone_2_terminate)
-            if drone_1_movement[0] == 0.1:
-                drone_1_terminate = True
-                drone_1_movement[0], drone_1_movement[1] = 0, 0
-            if drone_2_movement[0] == 0.1:
-                drone_2_terminate = True
-                drone_2_movement[0], drone_2_movement[1] = 0, 0
+        if img2 is not None:
+            turn_2 = drone2_CV.center_subject(img2, 2)
+            logging.debug("Processed frame")
             
-            #move drone
-            drone1.send_rc(drone_1_movement[0], drone_1_movement[1], 0, turn_1)
-            drone2.send_rc(drone_2_movement[0], drone_2_movement[1], 0, turn_2)
+            # if human detected to be at the center
+            if turn_2 == 1:
+                human_yes_2 = True
+                drone2.send_rc(0, 0, 0, 0)
+            else:
+                drone1.send_rc(0, 0, 0, turn_2)
+        else:
+            logging.debug("no frame recieved")
+            
+    
 
-            timer = time.time()
+    if intersection:
+        drone2.send_rc(0, 0, 20, 0)
 
-drone1.land()
-drone2.land()
-drone1.streamoff()
-drone2.streamoff()
-drone1.end()
-drone2.end()
+    while not drone_1_terminate and not drone_2_terminate:
+
+        img1 = drone1.get_frame_read()
+        img2 = drone2.get_frame_read()
+        if img1 is not None:
+            turn_1, __ = drone1_CV.center_subject(img1, 1)
+            logging.debug("Processed frame")
+        else:
+            logging.debug("no frame recieved")
+        if img2 is not None:
+            turn_2, __ = drone2_CV.center_subject(img2, 2)
+            logging.debug("Processed frame")
+        else:
+            logging.debug("no frame recieved")
+        
+        if iter == 0:
+            sleep_time = 0 #do not update positions for the first loop
+            iter += 1
+        else:
+            sleep_time = time.time() - timer
+        if img1 is not None:
+            if not drone_1_terminate:
+                drone_1_pos[2] = drone1.get_yaw()
+                theta_x_component_1 = (drone_1_pos[2] - 90 * (drone_1_pos[0] > 0)) % 360
+                theta_y_component_1 = (drone_1_pos[2] + 180) % 360
+                delta_x_1 = abs(drone_1_movement[0]) * math.cos(math.radians(theta_x_component_1)) + abs(drone_1_movement[1]) * math.cos(math.radians(theta_y_component_1))
+                delta_y_1 = abs(drone_1_movement[0]) * math.sin(math.radians(theta_x_component_1)) + abs(drone_1_movement[1]) * math.sin(math.radians(theta_y_component_1))
+                drone_1_pos[0] += delta_x_1 * sleep_time
+                drone_1_pos[1] += delta_y_1 * sleep_time
+            else:
+                drone_1_pos[2] = drone1.get_yaw()
+        if img2 is not None:
+            if not drone_2_terminate:   
+                drone_2_pos[2] = drone2.get_yaw()
+                theta_x_component_2 = (drone_2_pos[2] - 90 * (drone_2_pos[0] > 0)) % 360
+                theta_y_component_2 = (drone_2_pos[2] + 180) % 360
+                delta_x_2 = abs(drone_2_movement[0]) * math.cos(math.radians(theta_x_component_2)) + abs(drone_2_movement[1]) * math.cos(math.radians(theta_y_component_2))
+                delta_y_2 = abs(drone_2_movement[0]) * math.sin(math.radians(theta_x_component_2)) + abs(drone_2_movement[1]) * math.sin(math.radians(theta_y_component_2))
+                drone_2_pos[0] += delta_x_2 * sleep_time
+                drone_2_pos[1] += delta_y_2 * sleep_time
+            else:
+                drone_2_pos[2] = drone2.get_yaw()
+
+                if intersection:
+                    if(drone2.getHeight() >= drone1.getHeight() + 20):
+                        drone2.send_rc(0, 0, -20, 0)
+                        intersection1 = True
+                        intersection = False
+                        
+                if intersection1:
+                    if(drone2.getHeight() == drone1.getHeight()):
+                        drone2.send_rc(0, 0, 0, 0)
+
+                #path planning
+                drone_1_movement = drone_1_path_plan.move_towards_goal(drone_1_pos[0], drone_1_pos[1], drone_1_pos[2], drone_1_terminate)
+                drone_2_movement = drone_2_path_plan.move_towards_goal(drone_2_pos[0], drone_2_pos[1], drone_2_pos[2], drone_2_terminate)
+                if drone_1_movement[0] == 0.1:
+                    drone_1_terminate = True
+                    drone_1_movement[0], drone_1_movement[1] = 0, 0
+                if drone_2_movement[0] == 0.1:
+                    drone_2_terminate = True
+                    drone_2_movement[0], drone_2_movement[1] = 0, 0
+                
+                #move drone
+                drone1.send_rc(drone_1_movement[0], drone_1_movement[1], 0, turn_1)
+                drone2.send_rc(drone_2_movement[0], drone_2_movement[1], 0, turn_2)
+
+                timer = time.time()
+
+    drone1.land()
+    drone2.land()
+    drone1.streamoff()
+    drone2.streamoff()
+    drone1.end()
+    drone2.end()
+
+except KeyboardInterrupt:
+    logging.info("KeyboardInterrupt received. Landing the drones...")
+    drone1.land()
+    drone2.land()
+    drone1.streamoff()
+    drone2.streamoff()
+    drone1.end()
+    drone2.end()
