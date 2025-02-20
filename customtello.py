@@ -127,7 +127,7 @@ class myTello:
         if self.sock:
             self.sock.close()
             self.sock = None  #  reset the socket
-        logging.info("Disconnected from drone")
+        logging.info("Disconnect`ed from drone")
 
     def moveForward(self, distance):
         # Move drones forward

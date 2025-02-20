@@ -28,7 +28,7 @@ def updateScreen():
                 running = False    
        
         startMap.start_screen(0, 0, 0, 0, 0, 0, 0, 0)
-        #sleep(10)
+        sleep(10)
 
     pygame.quit()
     sys.exit()
@@ -83,7 +83,6 @@ pygame.display.update()
 personx, persony, personpospx = map2.addPerson(sizeCoeff)
 personpos = (personx, persony)
 
-print("HELLO")
 startMap.changeInstruction("Moving Drones...")
 startMap.start_screen(0, 0, 0, 0, 0, 0, 0, 0)
 
@@ -151,8 +150,8 @@ if intersection:
     screen.blit(position_text, intersection)
     pygame.draw.circle(screen, (128, 0, 128), intersection, 6) #purple dot at intesection 
     intersection = (intersectx, intersecty)
-    collisiondetect = collision(path2[0], intersection, 500, 500)
-    collisiondetect.get_vertex() 
+    #collisiondetect = collision(path2[0], intersection, 500, 500)
+    #collisiondetect.get_vertex() 
     intersection = True
 print(intersection)
 print(personpos)
@@ -162,7 +161,6 @@ saveImg = pygame.Rect(0, 100, screen_width, screen_height-105)
 # Create a new Surface to store the part of the screen
 path1img = screen.subsurface(saveImg).copy()
 pygame.image.save(screen, "pathPlanned2.png") #Saves new background with path
-
 
 #Makes the drone image on a path
 drone1Img = pygame.image.load('tello3.png')  # Replace with your image file path
@@ -212,7 +210,7 @@ drone1current_pos = list(start_pos1)
 drone1previous_pos = drone1current_pos.copy()
 
 linearSpeed = 500
-angularSpeed = 500
+angularSpeed = 50
 
 timeDur = distanceInCm/linearSpeed
 rotationDur = angle/angularSpeed
@@ -237,8 +235,8 @@ dx2 = (end_pos2[0] - start_pos2[0]) / drone2num_steps
 dy2 = (end_pos2[1] - start_pos2[1]) / drone2num_steps
 
 initial_yaw = 0  # Initial yaw angle in degrees
-target_yaw1 = -(math.atan2(path[1][1] - personpospx[1], path[1][0] - personpospx[0])) * math.pi/180 # Target yaw angle in degrees (can be adjusted)
-target_yaw2 = -(math.atan2(path2[1][1] - personpospx[1], path2[1][0] - personpospx[0]))* math.pi/180
+target_yaw1 = map1.get_angle(path[0], personpospx, (path[0][0], path[0][1]+10))
+target_yaw2 = map2.get_angle(path2[0], personpospx, (path2[0][0]+10, path2[0][1]))
 print(target_yaw1)
 print(target_yaw2)
 
@@ -251,13 +249,10 @@ drawPoints(screen, drone1points, drone1Img, yaw1)
 drawPoints(screen, drone2points, drone2Img, yaw2)
 
 #updates the screen
-
-
 screenThread = threading.Thread(target=updateScreen)
 screenThread.start()
 
 #delays for the takeoff time
-time.sleep(10)
 running = True
 while running:
     for event in pygame.event.get():
