@@ -429,8 +429,8 @@ try:
     #turn on drones cameras
     drone1.streamon()
     drone2.streamon()
-    drone1.start_video_thread()
-    drone2.start_video_thread()
+    drone1.start_video_thread(1)
+    drone2.start_video_thread(2)
     drone1.takeoff()
     drone2.takeoff()
 

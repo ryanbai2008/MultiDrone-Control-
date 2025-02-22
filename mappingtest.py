@@ -236,7 +236,7 @@ dy2 = (end_pos2[1] - start_pos2[1]) / drone2num_steps
 
 initial_yaw = 0  # Initial yaw angle in degrees
 target_yaw1 = map1.get_angle(path[0], personpospx, (path[0][0], path[0][1]+10))
-target_yaw2 = map2.get_angle(path2[0], personpospx, (path2[0][0]+10, path2[0][1]))
+target_yaw2 = map2.get_angle(path2[0], personpospx, (path2[0][0], path2[0][1]+10))
 print(target_yaw1)
 print(target_yaw2)
 

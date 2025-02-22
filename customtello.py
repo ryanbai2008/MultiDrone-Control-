@@ -84,7 +84,7 @@ class myTello:
         self.send_command("streamoff")
 
     # Function to decode and display the video stream
-    def receive_video(self):
+    def receive_video(self, droneid):
         cap = cv2.VideoCapture('udp://@0.0.0.0:11111')
 
         while True:
@@ -95,8 +95,8 @@ class myTello:
             if ret:
                 with self.frame_lock:
                     self.frame = frame
-                #cv2.imshow(self.wifi_adapter_ip, self.frame)
-            
+                cv2.imshow(f"Drone {droneid}", self.frame)
+
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
 
@@ -114,9 +114,9 @@ class myTello:
         self.send_command("emergency")
 
     #automatically turns stream on
-    def start_video_thread(self):
+    def start_video_thread(self, droneid):
         self.running = True
-        self.video_thread = Thread(target=self.receive_video)
+        self.video_thread = Thread(target=self.receive_video, args=(droneid,))
         self.video_thread.start()
 
     def end(self):
