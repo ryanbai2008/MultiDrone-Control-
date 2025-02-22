@@ -87,7 +87,7 @@ class myTello:
     def receive_video(self, droneid):
         cap = cv2.VideoCapture('udp://@0.0.0.0:11111')
 
-        while True:
+        while self.running:
             if self.stop_video:  # Check if the video stream should stop
                 break
 
@@ -96,10 +96,10 @@ class myTello:
                 with self.frame_lock:
                     self.frame = frame
                 cv2.imshow(f"Drone {droneid}", self.frame)
-
+            time.sleep(0.1)
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
-
+        self.end()
         cap.release()
         cv2.destroyAllWindows()
 
@@ -127,6 +127,9 @@ class myTello:
         if self.sock:
             self.sock.close()
             self.sock = None  #  reset the socket
+        self.frame = None
+        self.frame_lock = Lock()
+        self.video_thread = None
         logging.info("Disconnect`ed from drone")
 
     def moveForward(self, distance):

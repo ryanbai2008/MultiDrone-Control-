@@ -62,9 +62,9 @@ print("\n\n\nnow moving paths\n\n\n")
 ##############################
 #########Path Planning########
 ##############################
-drone_1_pos[2] = tello.get_yaw()
+drone_1_pos[2] = (tello.get_yaw() - 360) % 360
 
-while total_time < 15:
+while total_time < 30:
     #update total time
     total_time = time.time() - start_time
 
@@ -83,15 +83,15 @@ while total_time < 15:
     if not drone_1_terminate:
         #calculate new angle
         print(f"updating position: {drone_1_pos}")
-        drone_1_pos[2] = tello.get_yaw()
+        drone_1_pos[2] = (tello.get_yaw() - 360) % 360
         # drone_1_pos[2] += turn_1 * sleep_time
         # drone_1_pos[2] = drone_1_pos[2] % 360
 
         #calculate new position
         theta_x_component = (drone_1_pos[2] - 90 * (drone_1_pos[0] > 0)) % 360
         theta_y_component = (drone_1_pos[2] + 180) % 360
-        delta_x = abs(drone_1_movement[0]) * math.cos(math.radians(theta_x_component)) + abs(drone_1_movement[1]) * math.cos(math.radians(theta_y_component))
-        delta_y = abs(drone_1_movement[0]) * math.sin(math.radians(theta_x_component)) + abs(drone_1_movement[1]) * math.sin(math.radians(theta_y_component))
+        delta_x = abs(drone_1_movement[0]) * math.cos(math.radians(theta_x_component)) + drone_1_movement[1] * math.cos(math.radians(theta_y_component))
+        delta_y = abs(drone_1_movement[0]) * math.sin(math.radians(theta_x_component)) + drone_1_movement[1] * math.sin(math.radians(theta_y_component))
         drone_1_pos[0] += delta_x * sleep_time
         drone_1_pos[1] += delta_y * sleep_time
         # drone_1_pos[0] += drone_1_movement[0] * sleep_time

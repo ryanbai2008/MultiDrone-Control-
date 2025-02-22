@@ -19,7 +19,7 @@ import collision
 import logging
 
 # Define the IP addresses of the two Wi-Fi adapters
-WIFI_ADAPTER_1_IP = "192.168.10.2"  # IP address of Wi-Fi Adapter 1 (connected to Drone 1)
+WIFI_ADAPTER_1_IP = "192.168.10.4"  # IP address of Wi-Fi Adapter 1 (connected to Drone 1)
 WIFI_ADAPTER_2_IP = "192.168.10.3"  # IP address of Wi-Fi Adapter 2 (connected to Drone 2)
 
 drone1 = myTello(WIFI_ADAPTER_1_IP)
@@ -555,5 +555,16 @@ except KeyboardInterrupt:
     drone2.land()
     drone1.streamoff()
     drone2.streamoff()
+    drone1.stop_video_stream()
+    drone2.stop_video_stream()
     drone1.end()
     drone2.end()
+    drone1.end()
+    drone2.end()
+    drone1.end()
+    drone2.end()
+    drone1.end()
+    drone2.end()
+    drone1.end()
+    drone2.end()
+    ros
