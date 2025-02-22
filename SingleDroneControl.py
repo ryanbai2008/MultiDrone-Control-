@@ -1,4 +1,4 @@
-from djitellopy import Tello
+from DJITelloPy import djitellopy
 import cv2
 import time
 import tello_tracking
@@ -6,7 +6,7 @@ import path_planner
 import math
 
 #path
-start_1_X, start_1_Y, end_1_X, end_1_Y = 120, 0, 0, -120
+start_1_X, start_1_Y, end_1_X, end_1_Y = 0, 0, 120, 120
 path1 = [start_1_X, start_1_Y, end_1_X, end_1_Y]
 
 #drone current values
@@ -23,7 +23,7 @@ drone_1_CV = tello_tracking.CV()
 drone_1_terminate = False
 
 #turn on drone
-tello = Tello()
+tello = djitellopy.Tello()
 tello.connect()
 tello.streamon()
 tello.takeoff()
@@ -42,6 +42,7 @@ total_time = 0
 ##############################
 facing_human = False
 print(tello.get_battery())
+print(f"yaw: {tello.get_yaw()}")
 tello.send_rc_control(0, 0, 60, 0)
 while not facing_human:
     #CV
@@ -50,7 +51,7 @@ while not facing_human:
 
     #turn
     if turn_1 == 0: #if no human detected, continue turning
-        turn_1 = 10
+        turn_1 = 25
     elif turn_1 == 1: #human centered
         facing_human = True
         turn_1 = 0
@@ -61,7 +62,7 @@ print("\n\n\nnow moving paths\n\n\n")
 ##############################
 #########Path Planning########
 ##############################
-drone_1_pos = tello.get_yaw()
+drone_1_pos[2] = tello.get_yaw()
 
 while total_time < 15:
     #update total time
@@ -117,6 +118,7 @@ while total_time < 15:
 
 
 #clean up
+time.sleep(5)
 cv2.destroyAllWindows()
 tello.land()
 tello.streamoff()
