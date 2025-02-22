@@ -498,8 +498,8 @@ try:
                 drone_1_pos[2] = drone1.get_yaw()
                 theta_x_component_1 = (drone_1_pos[2] - 90 * (drone_1_pos[0] > 0)) % 360
                 theta_y_component_1 = (drone_1_pos[2] + 180) % 360
-                delta_x_1 = abs(drone_1_movement[0]) * math.cos(math.radians(theta_x_component_1)) + abs(drone_1_movement[1]) * math.cos(math.radians(theta_y_component_1))
-                delta_y_1 = abs(drone_1_movement[0]) * math.sin(math.radians(theta_x_component_1)) + abs(drone_1_movement[1]) * math.sin(math.radians(theta_y_component_1))
+                delta_x_1 = abs(drone_1_movement[0]) * math.cos(math.radians(theta_x_component_1)) + drone_1_movement[1] * math.cos(math.radians(theta_y_component_1))
+                delta_y_1 = abs(drone_1_movement[0]) * math.sin(math.radians(theta_x_component_1)) + drone_1_movement[1] * math.sin(math.radians(theta_y_component_1))
                 drone_1_pos[0] += delta_x_1 * sleep_time
                 drone_1_pos[1] += delta_y_1 * sleep_time
             else:
@@ -509,8 +509,8 @@ try:
                 drone_2_pos[2] = drone2.get_yaw()
                 theta_x_component_2 = (drone_2_pos[2] - 90 * (drone_2_pos[0] > 0)) % 360
                 theta_y_component_2 = (drone_2_pos[2] + 180) % 360
-                delta_x_2 = abs(drone_2_movement[0]) * math.cos(math.radians(theta_x_component_2)) + abs(drone_2_movement[1]) * math.cos(math.radians(theta_y_component_2))
-                delta_y_2 = abs(drone_2_movement[0]) * math.sin(math.radians(theta_x_component_2)) + abs(drone_2_movement[1]) * math.sin(math.radians(theta_y_component_2))
+                delta_x_2 = abs(drone_2_movement[0]) * math.cos(math.radians(theta_x_component_2)) + drone_2_movement[1] * math.cos(math.radians(theta_y_component_2))
+                delta_y_2 = abs(drone_2_movement[0]) * math.sin(math.radians(theta_x_component_2)) + drone_2_movement[1] * math.sin(math.radians(theta_y_component_2))
                 drone_2_pos[0] += delta_x_2 * sleep_time
                 drone_2_pos[1] += delta_y_2 * sleep_time
             else:
