@@ -5,13 +5,14 @@ import cv2
 import numpy as np
 import logging
 import re
+import threading
 
 #set up logging
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
 #brayden and ryan custom API for drones
 class myTello:
-    def __init__(self, wifi_adapter_ip):
+    def __init__(self, wifi_adapter_ip, video_port):
         self.TELLO_IP = "192.168.10.1"
         self.PORT = 8889
         self.BUFFER_SIZE = 4096
@@ -23,6 +24,8 @@ class myTello:
         self.video_thread = None
         self.running = False
         self.stop_video = False
+        self.VIDEO_PORT = video_port
+        self.connected = False
 
     # Initialize and bind the UDP socket
     def init_socket(self):
@@ -71,8 +74,11 @@ class myTello:
     def connect(self):
         if self.sock is None:
             self.init_socket()
+        if self.connected == False:
         # Connect to the drones by sending the 'command' mode
-        self.send_command("command")
+            self.send_command("command")
+            self.connected = True
+            logging.info("Connected to drone")
 
     def takeoff(self):
         self.send_command("takeoff")
@@ -85,21 +91,19 @@ class myTello:
 
     # Function to decode and display the video stream
     def receive_video(self, droneid):
-        cap = cv2.VideoCapture('udp://@0.0.0.0:11111')
-
+        cap = cv2.VideoCapture(f'udp://@{self.wifi_adapter_ip}:{self.VIDEO_PORT}')
         while self.running:
             if self.stop_video:  # Check if the video stream should stop
                 break
 
             ret, frame = cap.read()
             if ret:
+                frame = cv2.resize(frame, (960, 720))
                 with self.frame_lock:
                     self.frame = frame
-                cv2.imshow(f"Drone {droneid}", self.frame)
-            time.sleep(0.1)
+                #cv2.imshow(f"Drone {droneid}", self.frame)
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
-        self.end()
         cap.release()
         cv2.destroyAllWindows()
 
@@ -107,8 +111,22 @@ class myTello:
         with self.frame_lock:
             return self.frame
         
+
+        
     def stop_video_stream(self):
         self.stop_video = True
+        self.running = False
+
+    def stop_drone_video(self):
+        if self.running:
+            self.running = False
+            self.stop_video_stream()  # stop video stream 
+            if self.video_thread is not None:
+                self.video_thread.join()
+            self.frame = None
+            self.frame_lock = Lock()
+            self.video_thread = None
+            logging.info("Stopped video stream")
     
     def emergency(self):
         self.send_command("emergency")
@@ -130,7 +148,8 @@ class myTello:
         self.frame = None
         self.frame_lock = Lock()
         self.video_thread = None
-        logging.info("Disconnect`ed from drone")
+        logging.info("Disconnected from drone")
+        self.connected = False
 
     def moveForward(self, distance):
         # Move drones forward
@@ -163,9 +182,6 @@ class myTello:
     def land(self):
         # Land both drones
         self.send_command("land")
-        self.sock.close()
-        time.sleep(2)
-        self.connect()
 
     def rotateCCW(self, angle):
         self.send_command(f'ccw {abs(angle)}')
@@ -242,3 +258,26 @@ class myTello:
         angular_speed1 = yaw_difference / 1  
         
         return angular_speed1
+
+class VideoProxyServer:
+    def __init__(self, drone_ips, server_ip, base_port):
+        self.drone_ips = drone_ips
+        self.server_ip = server_ip
+        self.base_port = base_port
+
+    def start_proxy(self):
+        for i, drone_ip in enumerate(self.drone_ips):
+            drone_port = 11111  # Tello video port
+            local_port = self.base_port + i
+            start = threading.Thread(target=self.proxy_video, args=(drone_ip, drone_port, local_port))
+            start.start()
+
+    def proxy_video(self, drone_ip, drone_port, local_port):
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.bind((self.server_ip, local_port))
+        drone_addr = (drone_ip, drone_port)
+
+        while True:
+            data, _ = sock.recvfrom(4096)
+            sock.sendto(data, drone_addr)
+

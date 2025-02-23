@@ -11,7 +11,7 @@ start_1_X, start_1_Y, end_1_X, end_1_Y = 0, 0, 300, -300
 path1 = [start_1_X, start_1_Y, end_1_X, end_1_Y]
 
 #other drone path
-path2 = [0, -150, 50, 150]
+path2 = [100, -150, 50, 150]
 
 #drone current values
 drone_1_pos = [path1[0], path1[1], 0] #(X, Y, angle), STARTING ANGLE MUST BE 0 DEGREES

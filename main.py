@@ -12,18 +12,27 @@ import map
 from localizeIRT import localizer
 import socket
 import os
+from customtello import VideoProxyServer
 from customtello import myTello
+
 import path_planner
 import tello_tracking
 import collision
 import logging
 
 # Define the IP addresses of the two Wi-Fi adapters
-WIFI_ADAPTER_1_IP = "192.168.10.4"  # IP address of Wi-Fi Adapter 1 (connected to Drone 1)
+WIFI_ADAPTER_1_IP = "192.168.10.2"  # IP address of Wi-Fi Adapter 1 (connected to Drone 1)
 WIFI_ADAPTER_2_IP = "192.168.10.3"  # IP address of Wi-Fi Adapter 2 (connected to Drone 2)
 
-drone1 = myTello(WIFI_ADAPTER_1_IP)
-drone2 = myTello(WIFI_ADAPTER_2_IP)
+drone_ips = [WIFI_ADAPTER_1_IP, WIFI_ADAPTER_2_IP]
+server_ip = "192.168.209.193"  # Replace with your actual server IP
+base_port = 10000
+
+#proxy_server = VideoProxyServer(drone_ips, server_ip, base_port)
+#proxy_server.start_proxy()
+
+drone1 = myTello(WIFI_ADAPTER_1_IP, base_port)
+drone2 = myTello(WIFI_ADAPTER_2_IP, base_port + 1)
 
 drone1.connect()
 drone2.connect()
@@ -478,11 +487,6 @@ try:
         else:
             logging.debug("no frame recieved")
             
-    
-
-    if intersection:
-        drone2.send_rc(0, 0, 20, 0)
-
     while not drone_1_terminate and not drone_2_terminate:
 
         img1 = drone1.get_frame_read()
@@ -556,8 +560,10 @@ try:
     drone2.land()
     drone1.streamoff()
     drone2.streamoff()
-    drone1.end()
-    drone2.end()
+    drone1.stop_drone_video()
+    drone2.stop_drone_video()
+    #drone1.end()
+    #drone2.end()
 
 except KeyboardInterrupt:
     logging.info("KeyboardInterrupt received. Landing the drones...")
@@ -565,16 +571,7 @@ except KeyboardInterrupt:
     drone2.land()
     drone1.streamoff()
     drone2.streamoff()
-    drone1.stop_video_stream()
-    drone2.stop_video_stream()
-    drone1.end()
-    drone2.end()
-    drone1.end()
-    drone2.end()
-    drone1.end()
-    drone2.end()
-    drone1.end()
-    drone2.end()
-    drone1.end()
-    drone2.end()
-    
+    drone1.stop_drone_video()
+    drone2.stop_drone_video()
+     #drone1.end()
+    #drone2.end()
