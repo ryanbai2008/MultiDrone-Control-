@@ -328,12 +328,12 @@ def localize():
     rotationDur2 = angle2/angularSpeed
 
     drone1num_steps = int(timeDur / updateTime)
-    drone1angle_num_steps = int(rotationDur / angleUpdateTime)
+    drone1angle_num_steps = abs(int(rotationDur / angleUpdateTime))
 
     drone2current_pos = list(start_pos2)
     drone2previous_pos= drone2current_pos.copy()
     drone2num_steps = int(timeDur2 / updateTime)
-    drone2angle_num_steps = int(rotationDur2 / angleUpdateTime)
+    drone2angle_num_steps = abs(int(rotationDur2 / angleUpdateTime))
 
 
     # Calculate the increments in x and y directions
@@ -343,9 +343,9 @@ def localize():
     dx2 = (end_pos2[0] - start_pos2[0]) / drone2num_steps
     dy2 = (end_pos2[1] - start_pos2[1]) / drone2num_steps
 
-    initial_yaw = 0  # Initial yaw angle in degrees
-    target_yaw1 = -(math.atan2(path[1][1] - personpospx[1], path[1][0] - personpospx[0])) * math.pi/180 # Target yaw angle in degrees (can be adjusted)
-    target_yaw2 = -(math.atan2(path2[1][1] - personpospx[1], path2[1][0] - personpospx[0]))* math.pi/180
+    initial_yaw = 0  # Initial yaw angle in 
+    target_yaw1 = map1.get_angle(path[0], personpospx, (path[0][0], path[0][1]+10))
+    target_yaw2 = map2.get_angle(path2[0], personpospx, (path2[0][0], path2[0][1]+10))
     print(target_yaw1)
     print(target_yaw2)
 
@@ -364,8 +364,10 @@ def localize():
     #updates the screen
    
     #delays for the takeoff time
-    time.sleep(10)
+    time.sleep(5)
     running = True
+    rotating1 = True
+    rotating2 = True
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -373,11 +375,14 @@ def localize():
 
         screen.blit(background.image, (0, 0))    
 
-        if yaw1 != target_yaw1:
-            yaw1 += (abs(target_yaw1) - initial_yaw) / drone1angle_num_steps
-            if abs(yaw1 - target_yaw1) < 0.1:
-                yaw1 = target_yaw1  # Snap to target yaw if close
+        if rotating1:
+            if yaw1 != target_yaw1:
+                yaw1 += (((target_yaw1) - initial_yaw) / drone1angle_num_steps)
+                if abs(yaw1 - target_yaw1) < 0.1:
+                    yaw1 = target_yaw1  # Snap to target yaw if close
+                    rotating1 = False
         else:
+            yaw1 = map1.get_angle(drone1current_pos, personpospx, (drone1current_pos[0], drone1current_pos[1]+10))
             if step1 <= drone1num_steps:
                 previous_pos1 = drone1current_pos.copy()
                 drone1current_pos[0] += dx1
@@ -387,12 +392,16 @@ def localize():
                 drone1points.append((int(drone1current_pos[0]), int(drone1current_pos[1])))
                 step1 += 1
 
-
-        if yaw2 != target_yaw2:
-            yaw2 += (abs(target_yaw2) - initial_yaw) / drone2angle_num_steps
-            if abs(yaw2 - target_yaw2) < 0.1:
-                yaw2 = target_yaw2  # Snap to target yaw if close
+        if rotating2:
+            if yaw2 != target_yaw2:
+                yaw2 += ((target_yaw2) - initial_yaw) / drone2angle_num_steps
+                if abs(yaw2 - target_yaw2) < 0.1:
+                    yaw2 = target_yaw2  # Snap to target yaw if close
+                    rotating2 = False
         else:
+
+            yaw2 = map1.get_angle(drone2current_pos, personpospx, (drone2current_pos[0], drone2current_pos[1]+10))
+
             if step2 <= drone2num_steps:
                 previous_pos2 = drone2current_pos.copy()
                 drone2current_pos[0] += dx2
@@ -407,7 +416,8 @@ def localize():
         drawPoints(screen, drone2points, drone2Img, yaw2)
         pygame.display.update()
         
-        pygame.time.delay(int(updateTime))
+        pygame.time.delay(int(updateTime*1000))
+
 
     pygame.quit()
     sys.exit()

@@ -186,7 +186,6 @@ def drawPoints(screen, points, droneimg, yaw):
     y_cord  = (int)((screen_height  - points[-1][1])/sizeCoeff)
     position_text = font.render(f'({x_cord}, {y_cord})cm', True, (255, 0, 0))
     screen.blit(position_text, (points[-1][0] + 10, points[-1][1] + 10))
-
 background = Background('pathPlanned2.png', [0, 0], 1)
 x,y = 0, 0 # origin
 
@@ -210,7 +209,7 @@ drone1current_pos = list(start_pos1)
 drone1previous_pos = drone1current_pos.copy()
 
 linearSpeed = 500
-angularSpeed = 50
+angularSpeed = 500
 
 timeDur = distanceInCm/linearSpeed
 rotationDur = angle/angularSpeed
@@ -219,12 +218,12 @@ timeDur2 = distanceInCm2/linearSpeed
 rotationDur2 = angle2/angularSpeed
 
 drone1num_steps = int(timeDur / updateTime)
-drone1angle_num_steps = int(rotationDur / angleUpdateTime)
+drone1angle_num_steps = abs(int(rotationDur / angleUpdateTime))
 
 drone2current_pos = list(start_pos2)
 drone2previous_pos= drone2current_pos.copy()
 drone2num_steps = int(timeDur2 / updateTime)
-drone2angle_num_steps = int(rotationDur2 / angleUpdateTime)
+drone2angle_num_steps = abs(int(rotationDur2 / angleUpdateTime))
 
 
 # Calculate the increments in x and y directions
@@ -234,9 +233,9 @@ dy1 = (end_pos1[1] - start_pos1[1]) / drone1num_steps
 dx2 = (end_pos2[0] - start_pos2[0]) / drone2num_steps
 dy2 = (end_pos2[1] - start_pos2[1]) / drone2num_steps
 
-initial_yaw = 0  # Initial yaw angle in degrees
-target_yaw1 = map1.get_angle(path[0], personpospx, (path[0][0]+10, path[0][1]))
-target_yaw2 = map2.get_angle(path2[0], personpospx, (path2[0][0]+10, path2[0][1]))
+initial_yaw = 0  # Initial yaw angle in 
+target_yaw1 = map1.get_angle(path[0], personpospx, (path[0][0], path[0][1]+10))
+target_yaw2 = map2.get_angle(path2[0], personpospx, (path2[0][0], path2[0][1]+10))
 print(target_yaw1)
 print(target_yaw2)
 
@@ -248,12 +247,16 @@ drone2points.append(drone2current_pos)
 drawPoints(screen, drone1points, drone1Img, yaw1)
 drawPoints(screen, drone2points, drone2Img, yaw2)
 
+#MOVES THE DRONES
+#drone_thread = threading.Thread(target=move_tello, args={distanceInCm, distanceInCm2, angle, angle2})
+#drone_thread.start()
+
 #updates the screen
-screenThread = threading.Thread(target=updateScreen)
-screenThread.start()
 
 #delays for the takeoff time
 running = True
+rotating1 = True
+rotating2 = True
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -261,12 +264,14 @@ while running:
 
     screen.blit(background.image, (0, 0))    
 
-    if yaw1 != target_yaw1:
-        print(yaw1)
-        yaw1 += (abs(target_yaw1) - initial_yaw) / drone1angle_num_steps
-        if abs(yaw1 - target_yaw1) < 0.1:
-            yaw1 = target_yaw1  # Snap to target yaw if close
+    if rotating1:
+        if yaw1 != target_yaw1:
+            yaw1 += (((target_yaw1) - initial_yaw) / drone1angle_num_steps)
+            if abs(yaw1 - target_yaw1) < 0.1:
+                yaw1 = target_yaw1  # Snap to target yaw if close
+                rotating1 = False
     else:
+        yaw1 = map1.get_angle(drone1current_pos, personpospx, (drone1current_pos[0], drone1current_pos[1]+10))
         if step1 <= drone1num_steps:
             previous_pos1 = drone1current_pos.copy()
             drone1current_pos[0] += dx1
@@ -276,12 +281,16 @@ while running:
             drone1points.append((int(drone1current_pos[0]), int(drone1current_pos[1])))
             step1 += 1
 
-
-    if yaw2 != target_yaw2:
-        yaw2 += (abs(target_yaw2) - initial_yaw) / drone2angle_num_steps
-        if abs(yaw2 - target_yaw2) < 0.1:
-            yaw2 = target_yaw2  # Snap to target yaw if close
+    if rotating2:
+        if yaw2 != target_yaw2:
+            yaw2 += ((target_yaw2) - initial_yaw) / drone2angle_num_steps
+            if abs(yaw2 - target_yaw2) < 0.1:
+                yaw2 = target_yaw2  # Snap to target yaw if close
+                rotating2 = False
     else:
+
+        yaw2 = map1.get_angle(drone2current_pos, personpospx, (drone2current_pos[0], drone2current_pos[1]+10))
+
         if step2 <= drone2num_steps:
             previous_pos2 = drone2current_pos.copy()
             drone2current_pos[0] += dx2
@@ -297,6 +306,9 @@ while running:
     pygame.display.update()
     
     pygame.time.delay(int(updateTime*1000))
+
+
+
 
 pygame.quit()
 sys.exit()
