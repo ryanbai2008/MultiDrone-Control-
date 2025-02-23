@@ -71,9 +71,9 @@ class CV:
 
             #output movement
             if center_x > width / 2 + 80:
-                return int(max(5, min(20, 1.02 ** (abs(center_x - width / 2))))) #turn right, scales based on how far from center subject is
+                return int(max(15, min(35, 1.02 ** (abs(center_x - width / 2))))) #turn right, scales based on how far from center subject is
             elif center_x < width / 2 - 80:
-                return -1 * int(max(5, min(20, 1.02 ** (abs(center_x - width / 2))))) #turn left
+                return -1 * int(max(15, min(35, 1.02 ** (abs(center_x - width / 2))))) #turn left
             else:
                 return 1  # goal reached
 

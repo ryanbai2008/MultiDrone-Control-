@@ -1,4 +1,4 @@
-from djitellopy import Tello
+from DJITelloPy import djitellopy
 import cv2
 import time
 import tello_tracking
@@ -7,11 +7,11 @@ import avoid
 import math
 
 #path
-start_1_X, start_1_Y, end_1_X, end_1_Y = 0, 0, 300, -150
+start_1_X, start_1_Y, end_1_X, end_1_Y = 0, 0, 300, -300
 path1 = [start_1_X, start_1_Y, end_1_X, end_1_Y]
 
 #other drone path
-path2 = [300, -150, 0, 0]
+path2 = [0, -150, 50, 150]
 
 #drone current values
 drone_1_pos = [path1[0], path1[1], 0] #(X, Y, angle), STARTING ANGLE MUST BE 0 DEGREES
@@ -28,11 +28,11 @@ drone_collision = avoid.Avoid(path1, path2)
 drone_1_terminate = False
 
 #turn on drone
-tello = Tello()
+tello = djitellopy.Tello()
 tello.connect()
 tello.streamon()
 tello.takeoff()
-tello.send_rc_control(0, 0, 40, 0)
+tello.send_rc_control(0, 0, 60, 0)
 
 #timer for position updates
 sleep_time = 0
@@ -74,7 +74,7 @@ print("\n\n\nnow moving paths\n\n\n")
 ##############################
 drone_1_pos[2] = -1 * tello.get_yaw()
 
-while total_time < 40:
+while total_time < 60:
     #update total time
     total_time = time.time() - start_time
 
@@ -115,9 +115,9 @@ while total_time < 40:
         collision_check = drone_collision.detect_collision(drone_1_pos[0], drone_1_pos[1])
         if collision_check == "collision":
             go_up = 40
-        elif collision_check == "no collision" and drone_height > normal_height + 5: #buffer
+        elif collision_check == "no collision" and drone_height > normal_height + 15: #buffer
             go_up = -20
-        elif collision_check == "no collision" and drone_height < normal_height - 5: #buffer
+        elif collision_check == "no collision" and drone_height < normal_height - 15: #buffer
             go_up = 20
         elif drone_height > 2 * normal_height:
             tello.land()
@@ -125,6 +125,7 @@ while total_time < 40:
             
         print(f"updated  position: {drone_1_pos}")
     else:
+        go_up = 0
         drone_1_pos[2] = (tello.get_yaw() - 360) % 360
 
     #path planning
