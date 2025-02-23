@@ -25,10 +25,10 @@ class CV:
         for out in outs:
             for detection in out:
                 scores = detection[5:]
-                class_id = np.argmax(scores) #index of predicted
+                class_id = np.argmax(scores) # Index of predicted class
                 confidence = scores[class_id]
 
-                if confidence > 0.5 and class_id == 0:  #if person detected
+                if confidence > 0.5 and class_id == 0:  # Filter for class "person"
                     center_x = int(detection[0] * width)
                     center_y = int(detection[1] * height)
                     w = int(detection[2] * width)
@@ -42,7 +42,7 @@ class CV:
                     confidences.append(float(confidence))
                     class_ids.append(class_id)
 
-        #resize img for fast display
+        # Resize image for faster display
         dim = (int(width / 4), int(height / 4))
         new_img = cv2.resize(img, dim)
 
@@ -51,7 +51,7 @@ class CV:
             x, y, w, h = boxes[max_index]
             center_x, center_y = centers[max_index]
 
-            #scale bounding boxes
+            # Scale bounding box coordinates based on resized image
             scale_x = new_img.shape[1] / float(width)
             scale_y = new_img.shape[0] / float(height)
             x = int(x * scale_x)
@@ -59,27 +59,25 @@ class CV:
             w = int(w * scale_x)
             h = int(h * scale_y)
 
-            #draw rectangle
+            # Draw rectangle and add text
             cv2.rectangle(new_img, (x, y), (x + w, y + h), (0, 255, 0), 2)
             label = str(self.classes[class_ids[max_index]])
             confidence = str(round(confidences[max_index], 2))
             cv2.putText(new_img, f"{label} {confidence}", (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
 
-            #show img
+            # Display the image
             cv2.imshow("img" + str(drone_number), new_img)
             cv2.waitKey(1)
-
-            #output movement
+            # Return movement based on object position
             if center_x > width / 2 + 80:
-                return int(max(15, min(35, 1.02 ** (abs(center_x - width / 2))))) #turn right, scales based on how far from center subject is
+                #15, 35 before
+                return int(max(10, min(30, 1.02 ** (abs(center_x - width / 2))))) #turn right, scales based on how far from center subject is
             elif center_x < width / 2 - 80:
-                return -1 * int(max(15, min(35, 1.02 ** (abs(center_x - width / 2))))) #turn left
+                return -1 * int(max(10, min(30, 1.02 ** (abs(center_x - width / 2))))) #turn left  # Turn left
             else:
-                return 1  # goal reached
+                return 1  # Go straight
 
-        #show img
         cv2.imshow("img" + str(drone_number), new_img)
         cv2.waitKey(1)
-
         return 0
 

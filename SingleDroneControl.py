@@ -40,8 +40,13 @@ timer = 0
 iter = 0
 
 #drone heights
-drone_height = tello.get_height()
-normal_height = tello.get_height()
+time.sleep(1)
+drone_height = 200
+normal_height = 200
+while tello.get_height() < normal_height:
+    tello.send_rc_control(0, 0, 0, 20)
+tello.send_rc_control(0, 0, 0, 0)
+go_up = 0
 
 #total time elapsed
 start_time = time.time()
@@ -51,7 +56,7 @@ total_time = 0
 ##Drone initial orientation###
 ##############################
 facing_human = False
-print(tello.get_battery())
+print(f"battery: {tello.get_battery()}")
 print(f"yaw: {tello.get_yaw()}")
 
 while not facing_human:
@@ -109,24 +114,27 @@ while total_time < 60:
         drone_1_pos[0] += delta_x * sleep_time
         drone_1_pos[1] += delta_y * sleep_time
 
-        #detect collision
-        go_up = 0
-        drone_height = tello.get_height()
+        #detect collision and manage heights
+        drone_height += go_up * sleep_time
+        print(f"drone height: {drone_height}, normal height: {normal_height}")
         collision_check = drone_collision.detect_collision(drone_1_pos[0], drone_1_pos[1])
         if collision_check == "collision":
             go_up = 40
-        elif collision_check == "no collision" and drone_height > normal_height + 15: #buffer
+        elif collision_check == "no collision" and drone_height > normal_height * 1.1: #buffer
             go_up = -20
-        elif collision_check == "no collision" and drone_height < normal_height - 15: #buffer
+        elif collision_check == "no collision" and drone_height < normal_height * 1.1: #buffer
             go_up = 20
-        elif drone_height > 2 * normal_height:
+        else:
+            go_up = 0
+        
+        if drone_height > 1.5 * normal_height:
             tello.land()
             break
-            
+        
         print(f"updated  position: {drone_1_pos}")
     else:
         go_up = 0
-        drone_1_pos[2] = (tello.get_yaw() - 360) % 360
+        drone_1_pos[2] = -1 * tello.get_yaw()
 
     #path planning
     drone_1_movement = drone_1_path_plan.move_towards_goal(drone_1_pos[0], drone_1_pos[1], drone_1_pos[2], drone_1_terminate)
