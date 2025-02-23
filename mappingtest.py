@@ -235,8 +235,8 @@ dx2 = (end_pos2[0] - start_pos2[0]) / drone2num_steps
 dy2 = (end_pos2[1] - start_pos2[1]) / drone2num_steps
 
 initial_yaw = 0  # Initial yaw angle in degrees
-target_yaw1 = map1.get_angle(path[0], personpospx, (path[0][0], path[0][1]+10))
-target_yaw2 = map2.get_angle(path2[0], personpospx, (path2[0][0], path2[0][1]+10))
+target_yaw1 = map1.get_angle(path[0], personpospx, (path[0][0]+10, path[0][1]))
+target_yaw2 = map2.get_angle(path2[0], personpospx, (path2[0][0]+10, path2[0][1]))
 print(target_yaw1)
 print(target_yaw2)
 
@@ -262,6 +262,7 @@ while running:
     screen.blit(background.image, (0, 0))    
 
     if yaw1 != target_yaw1:
+        print(yaw1)
         yaw1 += (abs(target_yaw1) - initial_yaw) / drone1angle_num_steps
         if abs(yaw1 - target_yaw1) < 0.1:
             yaw1 = target_yaw1  # Snap to target yaw if close
@@ -295,7 +296,7 @@ while running:
     drawPoints(screen, drone2points, drone2Img, yaw2)
     pygame.display.update()
     
-    pygame.time.delay(int(updateTime))
+    pygame.time.delay(int(updateTime*1000))
 
 pygame.quit()
 sys.exit()
