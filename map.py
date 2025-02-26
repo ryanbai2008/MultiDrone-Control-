@@ -242,12 +242,12 @@ class initializeMap:
         batterytext = batteryfont.render(percent, True , (0, 0, 10)) 
         self.screen.blit(batterytext, (70, 18))
 
-        xSpeedText = "Speed(x):" + str(speedx1) + " cm/s"
+        xSpeedText = "Linear Speed:" + str(speedx1) + " cm/s"
         speedFont = pygame.font.SysFont('Comic Sans', 10)
         xSpeedText = speedFont.render(xSpeedText, True , (0, 0, 10)) 
         self.screen.blit(xSpeedText, (75, 34))
 
-        zSpeedText = "Speed(z):" + str(speedz1) + " cm/s"
+        zSpeedText = "Angular Speed:" + str(speedz1) + " deg/s"
         zSpeedText = speedFont.render(zSpeedText, True , (0, 0, 10)) 
         self.screen.blit(zSpeedText, (75, 50))
 
@@ -275,14 +275,14 @@ class initializeMap:
         batterytext2 = batteryfont.render(percent2, True , (0, 0, 10)) 
         self.screen.blit(batterytext2, (screen_width-120, 18))
 
-        xSpeedText2 = "Speed(x):" + str(speedx2) + " cm/s"
+        xSpeedText2 = "Linear Speed:" + str(speedx2) + " cm/s"
         speedFont = pygame.font.SysFont('Comic Sans', 10)
         xSpeedText2 = speedFont.render(xSpeedText2, True , (0, 0, 10)) 
-        self.screen.blit(xSpeedText2, (screen_width-155, 34))
+        self.screen.blit(xSpeedText2, (screen_width-178, 34))
 
-        zSpeedText2 = "Speed(z):" + str(speedz2) + " cm/s"
+        zSpeedText2 = "Angular Speed:" + str(speedz2) + " deg/s"
         zSpeedText2 = speedFont.render(zSpeedText2, True , (0, 0, 10)) 
-        self.screen.blit(zSpeedText2, (screen_width-155, 50))
+        self.screen.blit(zSpeedText2, (screen_width-178, 50))
 
         altitudeText2 = "Height: " + str(altitude2) + " cm"
         altitudeText2 = speedFont.render(altitudeText2, True , (0, 0, 10)) 

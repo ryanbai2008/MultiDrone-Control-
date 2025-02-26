@@ -19,6 +19,9 @@ import path_planner
 import tello_tracking
 import collision
 import logging
+import platform
+import subprocess
+
 
 # Define the IP addresses of the two Wi-Fi adapters
 WIFI_ADAPTER_1_IP = "192.168.10.2"  # IP address of Wi-Fi Adapter 1 (connected to Drone 1)
@@ -26,7 +29,63 @@ WIFI_ADAPTER_2_IP = "192.168.10.3"  # IP address of Wi-Fi Adapter 2 (connected t
 
 drone_ips = [WIFI_ADAPTER_1_IP, WIFI_ADAPTER_2_IP]
 server_ip = "192.168.209.193"  # Replace with your actual server IP
-base_port = 10000
+base_port = 30000
+TELLO_IP = "192.168.10.1"
+
+def run_command(command):
+    """Runs a system command and returns output."""
+    try:
+        subprocess.run(command, shell=True, check=True)
+    except subprocess.CalledProcessError as e:
+        print(f"Error running command: {e}")
+
+def connect_wifi(adapter, ssid):
+    """Connects Wi-Fi adapter to a specific Tello network."""
+    system = platform.system()
+    
+    if system == "Windows":
+        run_command(f'netsh wlan connect name="{ssid}" interface="{adapter}"')
+    else:  # Linux/macOS
+        run_command(f'nmcli device wifi connect "{ssid}" ifname {adapter}')
+    
+    time.sleep(5)
+
+def set_static_ip(adapter, ip):
+    """Assigns a static IP to the Wi-Fi adapter."""
+    system = platform.system()
+    
+    if system == "Windows":
+        run_command(f'netsh interface ip set address name="{adapter}" static {ip} 255.255.255.0')
+    else:  # Linux/macOS
+        run_command(f'sudo ifconfig {adapter} {ip} netmask 255.255.255.0 up')
+
+def add_route():
+    """Adds routing rules to direct traffic to the correct adapter."""
+    system = platform.system()
+    
+    if system == "Windows":
+        run_command(f'route -p add {TELLO_IP} mask 255.255.255.255 {WIFI_ADAPTER_1_IP} metric 1')
+        run_command(f'route -p add {TELLO_IP} mask 255.255.255.255 {WIFI_ADAPTER_2_IP} metric 1')
+    else:  # Linux/macOS
+        run_command(f'sudo ip route add {TELLO_IP} via {WIFI_ADAPTER_1_IP} dev wlan0')
+        run_command(f'sudo ip route add {TELLO_IP} via {WIFI_ADAPTER_2_IP} dev wlan1')
+
+WIFI_1 = "Wi-Fi"
+WIFI_2 = "Wi-Fi 2"
+
+connect_wifi(WIFI_1, "TELLO-D06F9F")
+connect_wifi(WIFI_2, "TELLO-EE4263")
+
+#debug
+#netsh wlan show interfaces   
+#route print                
+
+# Assign static IPs
+set_static_ip(WIFI_1, WIFI_ADAPTER_1_IP)
+set_static_ip(WIFI_2, WIFI_ADAPTER_2_IP)
+
+# Add routing rules
+add_route()
 
 #proxy_server = VideoProxyServer(drone_ips, server_ip, base_port)
 #proxy_server.start_proxy()

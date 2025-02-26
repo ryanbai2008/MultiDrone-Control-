@@ -6,6 +6,10 @@ import numpy as np
 import logging
 import re
 import threading
+import os
+import platform
+import subprocess
+
 
 #set up logging
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -91,7 +95,10 @@ class myTello:
 
     # Function to decode and display the video stream
     def receive_video(self, droneid):
-        cap = cv2.VideoCapture(f'udp://@{self.wifi_adapter_ip}:{self.VIDEO_PORT}')
+        video_stream_url = f'udp://@{self.wifi_adapter_ip}:{self.VIDEO_PORT}'
+            
+            # Initialize the video capture object with the URL of the drone's video feed
+        cap = cv2.VideoCapture(video_stream_url)       
         while self.running:
             if self.stop_video:  # Check if the video stream should stop
                 break

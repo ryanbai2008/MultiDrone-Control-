@@ -27,7 +27,7 @@ def updateScreen():
             if event.type == pygame.QUIT:
                 running = False    
        
-        startMap.start_screen(0, 0, 0, 0, 0, 0, 0, 0)
+        startMap.start_screen(82, 100, 10, 88, 50, 100, 70, 90)
         sleep(10)
 
     pygame.quit()
@@ -51,7 +51,7 @@ def scaleImgDown(img, scale_factor):
     return img
 
 startMap = map.initializeMap(screen, "Make Drone 1 Path")
-startMap.start_screen(0, 0, 0, 0, 0, 0, 0, 0)
+startMap.start_screen(82, 100, 10, 88, 50, 100, 12, 92)
 
 #DRONE 1 MAPPING
 map1 = map.mapStart(sizeCoeff, screen, Background('mymap.png', [0, 105], 0.7))
@@ -67,7 +67,7 @@ path1img = screen.subsurface(saveImg).copy()
 pygame.image.save(path1img, "pathPlanned.png") #Saves new background with path
 
 startMap.changeInstruction("Make Drone 2 Path")
-startMap.start_screen(0, 0, 0, 0, 0, 0, 0, 0)
+startMap.start_screen(82, 100, 10, 88, 50, 100, 12, 92)
 
 #DRONE 2 Mapping
 map2 = map.mapStart(sizeCoeff, screen, Background('pathPlanned.png', [0, 105], 1))
@@ -77,14 +77,14 @@ pygame.draw.line(screen, (0, 0, 0), path2[1], path2[2], 6) #creates a line as th
 pygame.draw.circle(screen, (0, 0, 255), path2[1], 5) #To note where the nodes are
 pygame.draw.circle(screen, (0, 0, 255), path2[2], 5) #To note where the nodes are
 
-startMap.start_screen(0, 0, 0, 0, 0, 0, 0, 0)
+startMap.start_screen(82, 100, 10, 88, 50, 100, 12, 92)
 pygame.display.update()
 
 personx, persony, personpospx = map2.addPerson(sizeCoeff)
 personpos = (personx, persony)
 
 startMap.changeInstruction("Moving Drones...")
-startMap.start_screen(0, 0, 0, 0, 0, 0, 0, 0)
+startMap.start_screen(82, 100, 10, 88, 50, 100, 12, 92)
 
 print(angle)
 print(distanceInCm)
