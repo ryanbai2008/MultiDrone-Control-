@@ -21,6 +21,8 @@ import collision
 import logging
 import platform
 import subprocess
+import avoid
+
 
 
 # Define the IP addresses of the two Wi-Fi adapters
@@ -32,60 +34,60 @@ server_ip = "192.168.209.193"  # Replace with your actual server IP
 base_port = 30000
 TELLO_IP = "192.168.10.1"
 
-def run_command(command):
-    """Runs a system command and returns output."""
-    try:
-        subprocess.run(command, shell=True, check=True)
-    except subprocess.CalledProcessError as e:
-        print(f"Error running command: {e}")
+# def run_command(command):
+#     """Runs a system command and returns output."""
+#     try:
+#         subprocess.run(command, shell=True, check=True)
+#     except subprocess.CalledProcessError as e:
+#         print(f"Error running command: {e}")
 
-def connect_wifi(adapter, ssid):
-    """Connects Wi-Fi adapter to a specific Tello network."""
-    system = platform.system()
+# def connect_wifi(adapter, ssid):
+#     """Connects Wi-Fi adapter to a specific Tello network."""
+#     system = platform.system()
     
-    if system == "Windows":
-        run_command(f'netsh wlan connect name="{ssid}" interface="{adapter}"')
-    else:  # Linux/macOS
-        run_command(f'nmcli device wifi connect "{ssid}" ifname {adapter}')
+#     if system == "Windows":
+#         run_command(f'netsh wlan connect name="{ssid}" interface="{adapter}"')
+#     else:  # Linux/macOS
+#         run_command(f'nmcli device wifi connect "{ssid}" ifname {adapter}')
     
-    time.sleep(5)
+#     time.sleep(2)
 
-def set_static_ip(adapter, ip):
-    """Assigns a static IP to the Wi-Fi adapter."""
-    system = platform.system()
+# def set_static_ip(adapter, ip):
+#     """Assigns a static IP to the Wi-Fi adapter."""
+#     system = platform.system()
     
-    if system == "Windows":
-        run_command(f'netsh interface ip set address name="{adapter}" static {ip} 255.255.255.0')
-    else:  # Linux/macOS
-        run_command(f'sudo ifconfig {adapter} {ip} netmask 255.255.255.0 up')
+#     if system == "Windows":
+#         run_command(f'netsh interface ip set address name="{adapter}" static {ip} 255.255.255.0')
+#     else:  # Linux/macOS
+#         run_command(f'sudo ifconfig {adapter} {ip} netmask 255.255.255.0 up')
 
-def add_route():
-    """Adds routing rules to direct traffic to the correct adapter."""
-    system = platform.system()
+# def add_route():
+#     """Adds routing rules to direct traffic to the correct adapter."""
+#     system = platform.system()
     
-    if system == "Windows":
-        run_command(f'route -p add {TELLO_IP} mask 255.255.255.255 {WIFI_ADAPTER_1_IP} metric 1')
-        run_command(f'route -p add {TELLO_IP} mask 255.255.255.255 {WIFI_ADAPTER_2_IP} metric 1')
-    else:  # Linux/macOS
-        run_command(f'sudo ip route add {TELLO_IP} via {WIFI_ADAPTER_1_IP} dev wlan0')
-        run_command(f'sudo ip route add {TELLO_IP} via {WIFI_ADAPTER_2_IP} dev wlan1')
+#     if system == "Windows":
+#         run_command(f'route -p add {TELLO_IP} mask 255.255.255.255 {WIFI_ADAPTER_1_IP} metric 1')
+#         run_command(f'route -p add {TELLO_IP} mask 255.255.255.255 {WIFI_ADAPTER_2_IP} metric 1')
+#     else:  # Linux/macOS
+#         run_command(f'sudo ip route add {TELLO_IP} via {WIFI_ADAPTER_1_IP} dev wlan2')
+#         run_command(f'sudo ip route add {TELLO_IP} via {WIFI_ADAPTER_2_IP} dev wlan1')
 
-WIFI_1 = "Wi-Fi"
-WIFI_2 = "Wi-Fi 2"
+# WIFI_1 = "Wi-Fi"
+# WIFI_2 = "Wi-Fi 2"
 
-connect_wifi(WIFI_1, "TELLO-D06F9F")
-connect_wifi(WIFI_2, "TELLO-EE4263")
+# connect_wifi(WIFI_1, "TELLO-D06F9F")
+# connect_wifi(WIFI_2, "TELLO-EE4263")
 
 #debug
 #netsh wlan show interfaces   
 #route print                
 
 # Assign static IPs
-set_static_ip(WIFI_1, WIFI_ADAPTER_1_IP)
-set_static_ip(WIFI_2, WIFI_ADAPTER_2_IP)
+#set_static_ip(WIFI_1, WIFI_ADAPTER_1_IP)
+#set_static_ip(WIFI_2, WIFI_ADAPTER_2_IP)
 
 # Add routing rules
-add_route()
+#add_route()
 
 #proxy_server = VideoProxyServer(drone_ips, server_ip, base_port)
 #proxy_server.start_proxy()
@@ -503,6 +505,7 @@ localizeThread = threading.Thread(target=localize)
 localizeThread.start()
 screenThread = threading.Thread(target=updateScreen)
 screenThread.start()
+
 try:
     #turn on drones cameras
     drone1.streamon()
@@ -512,117 +515,165 @@ try:
     drone1.takeoff()
     drone2.takeoff()
 
-    human_yes_2, human_yes_1 = False, False
+    #path
+    start_1_X, start_1_Y, end_1_X, end_1_Y = path[0][0], path[0][1], path[1][0], path[1][1]
+    path1 = [start_1_X, start_1_Y, end_1_X, end_1_Y]
 
-    while (not human_yes_1) and (not human_yes_2):
+    #other drone path
+    path_2 = [path2[0][0],path2[0][1], path2[1][0], path2[1][1]]
+
+    #drone current values
+    drone_1_pos = [path1[0], path1[1], 0] #(X, Y, angle), STARTING ANGLE MUST BE 0 DEGREES
+
+    #drone movement
+    drone_1_movement = [0, 0, 0] #(delta X, delta Y, delta angle)
+
+    #path planning and CV and collision objects
+    drone_1_path_plan = path_planner.PathPlan(path1[0], path1[2], path1[1], path1[3], drone_1_pos[2])
+    drone_1_CV = tello_tracking.CV()
+    drone_collision = avoid.Avoid(path1, path_2)
+
+    #goal reached for drones?
+    drone_1_terminate = False
+
+    #turn on drone
+
+    drone1.send_rc(0, 0, 60, 0)
+
+    #timer for position updates
+    sleep_time = 0
+    timer = 0
+    iter = 0
+
+    #drone heights
+    time.sleep(1)
+    drone_height = 200
+    normal_height = 200
+    while drone1.getHeight() < normal_height:
+        drone1.send_rc(0, 0, 0, 20)
+    drone1.send_rc(0, 0, 0, 0)
+    go_up = 0
+
+    #total time elapsed
+    start_time = time.time()
+    total_time = 0
+
+    ##############################
+    ##Drone initial orientation###
+    ##############################
+    facing_human = False
+    while not facing_human:
+
         #CV
         img1 = drone1.get_frame_read()
-        img2 = drone2.get_frame_read()
         if img1 is not None:
-            turn_1 = drone1_CV.center_subject(img1, 1)
             logging.debug("Processed frame")
-            if turn_1 == 1:
-                human_yes_1 = True
-                drone1.send_rc(0, 0, 0, 0)
-            elif turn_1 == 0:
-                drone1.send_rc(0, 0, 0, 20)
-            else:
-                drone1.send_rc(0, 0, 0, turn_1)
-        else:
-            logging.debug("no frame recieved")
+            turn_1 = drone_1_CV.center_subject(img1, 1)
 
-        if img2 is not None:
-            turn_2 = drone2_CV.center_subject(img2, 2)
-            logging.debug("Processed frame")
-            
-            # if human detected to be at the center
-            if turn_2 == 1:
-                human_yes_2 = True
-                drone2.send_rc(0, 0, 0, 0)
-            elif turn_2 == 0:
-                drone2.send_rc(0, 0, 0, 20)
-            else:
-                drone1.send_rc(0, 0, 0, turn_2)
+            #turn
+            if turn_1 == 0: #if no human detected, continue turning
+                turn_1 = 25
+            elif turn_1 == 1: #human centered
+                facing_human = True
+                turn_1 = 0
+            drone1.send_rc(0, 0, 0, turn_1)
+            time.sleep(0.3)
         else:
-            logging.debug("no frame recieved")
-            
-    while not drone_1_terminate and not drone_2_terminate:
+            logging.debug("No frame recieved")
 
-        img1 = drone1.get_frame_read()
-        img2 = drone2.get_frame_read()
-        if img1 is not None:
-            turn_1, __ = drone1_CV.center_subject(img1, 1)
-            logging.debug("Processed frame")
-        else:
-            logging.debug("no frame recieved")
-        if img2 is not None:
-            turn_2, __ = drone2_CV.center_subject(img2, 2)
-            logging.debug("Processed frame")
-        else:
-            logging.debug("no frame recieved")
+    print("\n\n\nnow moving paths\n\n\n")
+    ##############################
+    #########Path Planning########
+    ##############################
+    drone_1_pos[2] = -1 * drone1.get_yaw()
+
+    while total_time < 60:
+        #update total time
+        total_time = time.time() - start_time
+
+        #CV
         
-        if iter == 0:
-            sleep_time = 0 #do not update positions for the first loop
-            iter += 1
-        else:
-            sleep_time = time.time() - timer
+        img1 = drone1.get_frame_read()
         if img1 is not None:
+            logging.debug("Processed frame")
+            turn_1 = drone_1_CV.center_subject(img1, 1)
+            if turn_1 == 1:
+                turn_1 = 0
+            
+            #update timer
+            if iter == 0:
+                sleep_time = 0 #do not update positions for the first loop
+                iter += 1
+            else:
+                sleep_time = time.time() - timer
+            
             if not drone_1_terminate:
-                drone_1_pos[2] = drone1.get_yaw()
-                theta_x_component_1 = (drone_1_pos[2] - 90 * (drone_1_pos[0] > 0)) % 360
-                theta_y_component_1 = (drone_1_pos[2] + 180) % 360
-                delta_x_1 = abs(drone_1_movement[0]) * math.cos(math.radians(theta_x_component_1)) + drone_1_movement[1] * math.cos(math.radians(theta_y_component_1))
-                delta_y_1 = abs(drone_1_movement[0]) * math.sin(math.radians(theta_x_component_1)) + drone_1_movement[1] * math.sin(math.radians(theta_y_component_1))
-                drone_1_pos[0] += delta_x_1 * sleep_time
-                drone_1_pos[1] += delta_y_1 * sleep_time
-            else:
-                drone_1_pos[2] = drone1.get_yaw()
-        if img2 is not None:
-            if not drone_2_terminate:   
-                drone_2_pos[2] = drone2.get_yaw()
-                theta_x_component_2 = (drone_2_pos[2] - 90 * (drone_2_pos[0] > 0)) % 360
-                theta_y_component_2 = (drone_2_pos[2] + 180) % 360
-                delta_x_2 = abs(drone_2_movement[0]) * math.cos(math.radians(theta_x_component_2)) + drone_2_movement[1] * math.cos(math.radians(theta_y_component_2))
-                delta_y_2 = abs(drone_2_movement[0]) * math.sin(math.radians(theta_x_component_2)) + drone_2_movement[1] * math.sin(math.radians(theta_y_component_2))
-                drone_2_pos[0] += delta_x_2 * sleep_time
-                drone_2_pos[1] += delta_y_2 * sleep_time
-            else:
-                drone_2_pos[2] = drone2.get_yaw()
+                #calculate new angle
+                print(f"updating position: {drone_1_pos}")
+                drone_1_pos[2] = -1 * drone1.get_yaw()
 
-                if intersection:
-                    if(drone2.getHeight() >= drone1.getHeight() + 20):
-                        drone2.send_rc(0, 0, -20, 0)
-                        intersection1 = True
-                        intersection = False
-                        
-                if intersection1:
-                    if(drone2.getHeight() == drone1.getHeight()):
-                        drone2.send_rc(0, 0, 0, 0)
+                #calculate new position
+                theta_x_component_change = 0
+                if drone_1_movement[0] > 0:
+                    theta_x_component_change = -1
+                else:
+                    theta_x_component_change = 1
+                theta_x_component = (drone_1_pos[2] + 90 * theta_x_component_change) % 360
+                theta_y_component = (drone_1_pos[2]) % 360
+                delta_x = abs(drone_1_movement[0]) * math.cos(math.radians(theta_x_component)) + drone_1_movement[1] * math.cos(math.radians(theta_y_component))
+                delta_y = abs(drone_1_movement[0]) * math.sin(math.radians(theta_x_component)) + drone_1_movement[1] * math.sin(math.radians(theta_y_component))
+                drone_1_pos[0] += delta_x * sleep_time
+                drone_1_pos[1] += delta_y * sleep_time
 
-                #path planning
-                drone_1_movement = drone_1_path_plan.move_towards_goal(drone_1_pos[0], drone_1_pos[1], drone_1_pos[2], drone_1_terminate)
-                drone_2_movement = drone_2_path_plan.move_towards_goal(drone_2_pos[0], drone_2_pos[1], drone_2_pos[2], drone_2_terminate)
-                if drone_1_movement[0] == 0.1:
-                    drone_1_terminate = True
-                    drone_1_movement[0], drone_1_movement[1] = 0, 0
-                if drone_2_movement[0] == 0.1:
-                    drone_2_terminate = True
-                    drone_2_movement[0], drone_2_movement[1] = 0, 0
+                #detect collision and manage heights
+                drone_height += go_up * sleep_time
+                print(f"drone height: {drone_height}, normal height: {normal_height}")
+                collision_check = drone_collision.detect_collision(drone_1_pos[0], drone_1_pos[1])
+                if collision_check == "collision":
+                    go_up = 40
+                elif collision_check == "no collision" and drone_height > normal_height * 1.1: #buffer
+                    go_up = -20
+                elif collision_check == "no collision" and drone_height < normal_height * 1.1: #buffer
+                    go_up = 20
+                else:
+                    go_up = 0
                 
-                #move drone
-                drone1.send_rc(drone_1_movement[0], drone_1_movement[1], 0, turn_1)
-                drone2.send_rc(drone_2_movement[0], drone_2_movement[1], 0, turn_2)
+                if drone_height > 1.5 * normal_height:
+                    drone1.land()
+                    break
+                
+                print(f"updated  position: {drone_1_pos}")
+            else:
+                go_up = 0
+                drone_1_pos[2] = -1 * drone1.get_yaw()
 
-                timer = time.time()
+            #path planning
+            drone_1_movement = drone_1_path_plan.move_towards_goal(drone_1_pos[0], drone_1_pos[1], drone_1_pos[2], drone_1_terminate)
+            if drone_1_movement[0] == 0.1:
+                drone_1_terminate = True
+                print("\n\n\nnow stopping drone movement\n\n\n")
+                drone_1_movement[0], drone_1_movement[1] = 0, 0
+            
+            #move drone and update values, already considered if drone terminated
+            drone1.send_rc(drone_1_movement[0], drone_1_movement[1], go_up, turn_1)
 
+            timer = time.time() #time for keeping track of how much to update drones positions
+
+        else: 
+            logging.debug("no frame recieved")
+
+    #clean up
+    time.sleep(5)
+    cv2.destroyAllWindows()
     drone1.land()
     drone2.land()
     drone1.streamoff()
     drone2.streamoff()
     drone1.stop_drone_video()
     drone2.stop_drone_video()
-    #drone1.end()
-    #drone2.end()
+
+
+
 
 except KeyboardInterrupt:
     logging.info("KeyboardInterrupt received. Landing the drones...")
@@ -632,5 +683,5 @@ except KeyboardInterrupt:
     drone2.streamoff()
     drone1.stop_drone_video()
     drone2.stop_drone_video()
-     #drone1.end()
-    #drone2.end()
+        #drone1.end()
+        #drone2.end()
