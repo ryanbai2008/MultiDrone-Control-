@@ -76,13 +76,23 @@ class myTello:
         return None
     
     def connect(self):
-        if self.sock is None:
+        if self.sock is None or self.sock.fileno() == -1:
             self.init_socket()
-        if self.connected == False:
         # Connect to the drones by sending the 'command' mode
-            self.send_command("command")
-            self.connected = True
-            logging.info("Connected to drone")
+        if not self.connected:
+            response = self.send_command("command")
+            if response and "ok" in response.lower():
+                self.connected = True
+                logging.info("Connected to drone")
+            else:
+                logging.error("Failed to connect to drone. Retrying...")
+                self.connected = False
+
+    def keep_alive(self, interval=10):
+        """Keeps the drone connection alive by sending 'battery?' command every few seconds."""
+        while self.connected:
+            self.getBattery()
+            time.sleep(interval)
 
     def takeoff(self):
         self.send_command("takeoff")
@@ -145,9 +155,9 @@ class myTello:
         self.video_thread.start()
 
     def end(self):
-        self.running = False
         self.stop_video_stream()  # stop video stream 
         if self.video_thread is not None:
+            self.running = False
             self.video_thread.join()
         if self.sock:
             self.sock.close()
@@ -155,8 +165,9 @@ class myTello:
         self.frame = None
         self.frame_lock = Lock()
         self.video_thread = None
-        logging.info("Disconnected from drone")
         self.connected = False
+        logging.info("Disconnected from drone")
+
 
     def moveForward(self, distance):
         # Move drones forward

@@ -22,7 +22,7 @@ import logging
 import platform
 import subprocess
 import avoid
-
+import re
 
 
 # Define the IP addresses of the two Wi-Fi adapters
@@ -30,64 +30,134 @@ WIFI_ADAPTER_1_IP = "192.168.10.2"  # IP address of Wi-Fi Adapter 1 (connected t
 WIFI_ADAPTER_2_IP = "192.168.10.3"  # IP address of Wi-Fi Adapter 2 (connected to Drone 2)
 
 drone_ips = [WIFI_ADAPTER_1_IP, WIFI_ADAPTER_2_IP]
-server_ip = "192.168.209.193"  # Replace with your actual server IP
 base_port = 30000
 TELLO_IP = "192.168.10.1"
 
-# def run_command(command):
-#     """Runs a system command and returns output."""
-#     try:
-#         subprocess.run(command, shell=True, check=True)
-#     except subprocess.CalledProcessError as e:
-#         print(f"Error running command: {e}")
+# Adapter names
+WIFI_1 = "Wi-Fi"
+WIFI_2 = "Wi-Fi 2"
 
-# def connect_wifi(adapter, ssid):
-#     """Connects Wi-Fi adapter to a specific Tello network."""
-#     system = platform.system()
+def run_command(command):
+    """Runs a system command and returns output."""
+    try:
+        result = subprocess.run(command, shell=True, check=True, capture_output=True, text=True)
+        return result.stdout.strip()
+    except subprocess.CalledProcessError as e:
+        print(f"Error running command: {e}")
+        return None
+
+def get_connected_ssid(adapter):
+    """Returns the SSID of the currently connected network for the given adapter."""
+    system = platform.system()
     
-#     if system == "Windows":
-#         run_command(f'netsh wlan connect name="{ssid}" interface="{adapter}"')
-#     else:  # Linux/macOS
-#         run_command(f'nmcli device wifi connect "{ssid}" ifname {adapter}')
+    if system == "Windows":
+        result = run_command('netsh wlan show interfaces')
+        match = re.search(r"(?:IP Address|IPv4 Address)[\s.]+:\s+([\d.]+)", result)
+        return match.group(1) if match else None
+    elif system in ["Linux", "Darwin"]:
+        result = run_command(f'nmcli -t -f active,ssid dev wifi | grep "^yes"')
+        return result.strip().split(":")[-1] if result else None
+    return None
+
+
+def connect_wifi(adapter, ssid):
+    """Connects Wi-Fi adapter to a specific Tello network only if not already connected."""
+    current_ssid = get_connected_ssid(adapter)
     
-#     time.sleep(2)
-
-# def set_static_ip(adapter, ip):
-#     """Assigns a static IP to the Wi-Fi adapter."""
-#     system = platform.system()
+    if current_ssid == ssid:
+        print(f"{adapter} is already connected to {ssid}. Skipping connection.")
+        return
     
-#     if system == "Windows":
-#         run_command(f'netsh interface ip set address name="{adapter}" static {ip} 255.255.255.0')
-#     else:  # Linux/macOS
-#         run_command(f'sudo ifconfig {adapter} {ip} netmask 255.255.255.0 up')
-
-# def add_route():
-#     """Adds routing rules to direct traffic to the correct adapter."""
-#     system = platform.system()
+    print(f"Connecting {adapter} to {ssid}...")
+    system = platform.system()
     
-#     if system == "Windows":
-#         run_command(f'route -p add {TELLO_IP} mask 255.255.255.255 {WIFI_ADAPTER_1_IP} metric 1')
-#         run_command(f'route -p add {TELLO_IP} mask 255.255.255.255 {WIFI_ADAPTER_2_IP} metric 1')
-#     else:  # Linux/macOS
-#         run_command(f'sudo ip route add {TELLO_IP} via {WIFI_ADAPTER_1_IP} dev wlan2')
-#         run_command(f'sudo ip route add {TELLO_IP} via {WIFI_ADAPTER_2_IP} dev wlan1')
+    if system == "Windows":
+        run_command(f'netsh wlan connect name="{ssid}" interface="{adapter}"')
+    else:  # Linux/macOS
+        run_command(f'nmcli device wifi connect "{ssid}" ifname {adapter}')
+    
+    time.sleep(2)
 
-# WIFI_1 = "Wi-Fi"
-# WIFI_2 = "Wi-Fi 2"
 
-# connect_wifi(WIFI_1, "TELLO-D06F9F")
-# connect_wifi(WIFI_2, "TELLO-EE4263")
 
-#debug
-#netsh wlan show interfaces   
-#route print                
+def get_current_ip(adapter):
+    """Returns the current IP address of the Wi-Fi adapter."""
+    system = platform.system()
+    
+    if system == "Windows":
+        result = run_command(f'netsh interface ip show address name="{adapter}"')
+        match = re.search(r"IP Address:\s+([\d.]+)", result)
+        return match.group(1) if match else None
+    elif system in ["Linux", "Darwin"]:
+        result = run_command(f'ip addr show {adapter}')
+        match = re.search(r'inet (\d+\.\d+\.\d+\.\d+)/', result)
+        return match.group(1) if match else None
+    return None
+
+def set_static_ip(adapter, ip):
+    """Assigns a static IP to the Wi-Fi adapter only if it is not already set."""
+    current_ip = get_current_ip(adapter)
+    
+    if current_ip == ip:
+        print(f"Static IP for {adapter} is already {ip}. Skipping.")
+        return
+    
+    print(f"Setting static IP {ip} for {adapter}...")
+    system = platform.system()
+    
+    if system == "Windows":
+        run_command(f'netsh interface ip set address name="{adapter}" static {ip} 255.255.255.0')
+    else:  # Linux/macOS
+        run_command(f'sudo ifconfig {adapter} {ip} netmask 255.255.255.0 up')
+
+
+def check_route(ip):
+    """Checks if a route already exists for the given IP."""
+    system = platform.system()
+    
+    if system == "Windows":
+        result = run_command("route print")
+    elif system in ["Linux", "Darwin"]:
+        result = run_command("ip route show")
+    else:
+        return False
+    
+    return ip in result if result else False
+
+def add_route():
+    """Adds routing rules only if they do not already exist for each adapter."""
+    system = platform.system()
+
+    route_1_exists = check_route(WIFI_ADAPTER_1_IP)
+    route_2_exists = check_route(WIFI_ADAPTER_2_IP)
+
+    if route_1_exists and route_2_exists:
+        print(f"Routes for {TELLO_IP} already exist. Skipping.")
+        return
+
+    print(f"Adding missing route(s) for {TELLO_IP}...")
+
+    if system == "Windows":
+        if not route_1_exists:
+            run_command(f'route -p add {TELLO_IP} mask 255.255.255.255 {WIFI_ADAPTER_1_IP} metric 1')
+        if not route_2_exists:
+            run_command(f'route -p add {TELLO_IP} mask 255.255.255.255 {WIFI_ADAPTER_2_IP} metric 1')
+    elif system in ["Linux", "Darwin"]:
+        if not route_1_exists:
+            run_command(f'sudo ip route add {TELLO_IP} via {WIFI_ADAPTER_1_IP} dev wlan0')
+        if not route_2_exists:
+            run_command(f'sudo ip route add {TELLO_IP} via {WIFI_ADAPTER_2_IP} dev wlan1')
+
+# Connect to Tello networks
+connect_wifi(WIFI_1, "TELLO-D06F9F")
+connect_wifi(WIFI_2, "TELLO-EE4263")
 
 # Assign static IPs
-#set_static_ip(WIFI_1, WIFI_ADAPTER_1_IP)
-#set_static_ip(WIFI_2, WIFI_ADAPTER_2_IP)
+set_static_ip(WIFI_1, WIFI_ADAPTER_1_IP)
+set_static_ip(WIFI_2, WIFI_ADAPTER_2_IP)
 
-# Add routing rules
-#add_route()
+# Add route if necessary
+add_route()
 
 #proxy_server = VideoProxyServer(drone_ips, server_ip, base_port)
 #proxy_server.start_proxy()
@@ -98,9 +168,17 @@ drone2 = myTello(WIFI_ADAPTER_2_IP, base_port + 1)
 drone1.connect()
 drone2.connect()
 
+
+def start_keep_alive(drone):
+    keep_alive_thread = threading.Thread(target=drone.keep_alive, daemon=True)
+    keep_alive_thread.start()
+    return keep_alive_thread
+keep_alive_thread1 = start_keep_alive(drone1)
+keep_alive_thread2 = start_keep_alive(drone2)
+
 def move_tello(distance1, distance2, angle1, angle2):# Define the Tello IP and port
     # Take off both drones
-    drone1.takeoff
+    drone1.takeoff()
     time.sleep(5)
 
     #rotates the first drone
@@ -656,6 +734,7 @@ try:
             
             #move drone and update values, already considered if drone terminated
             drone1.send_rc(drone_1_movement[0], drone_1_movement[1], go_up, turn_1)
+            print(f"Drone 1 Position: {drone_1_pos}, Movement: {drone_1_movement}")
 
             timer = time.time() #time for keeping track of how much to update drones positions
 
