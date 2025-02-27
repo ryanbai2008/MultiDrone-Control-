@@ -9,6 +9,7 @@ import threading
 import os
 import platform
 import subprocess
+from collections import deque
 
 
 #set up logging
@@ -16,7 +17,7 @@ logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %
 
 #brayden and ryan custom API for drones
 class myTello:
-    def __init__(self, wifi_adapter_ip, video_port):
+    def __init__(self, wifi_adapter_ip, video_port, buffer_size=5):
         self.TELLO_IP = "192.168.10.1"
         self.PORT = 8889
         self.BUFFER_SIZE = 4096
@@ -30,6 +31,8 @@ class myTello:
         self.stop_video = False
         self.VIDEO_PORT = video_port
         self.connected = False
+        self.frame_buffer = deque(maxlen=buffer_size)  # Frame buffer to store frames
+
 
     # Initialize and bind the UDP socket
     def init_socket(self):
@@ -108,31 +111,33 @@ class myTello:
         video_stream_url = f'udp://@{self.wifi_adapter_ip}:{self.VIDEO_PORT}'
         logging.info(f"Starting video stream for drone {droneid} at {self.TELLO_IP}:{self.VIDEO_PORT}")
 
-        video_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        video_sock.bind((self.wifi_adapter_ip, self.VIDEO_PORT))  # Bind the local video port
-    
             
             # Initialize the video capture object with the URL of the drone's video feed
+        cap = cv2.VideoCapture(video_stream_url)       
         while self.running:
             if self.stop_video:  # Check if the video stream should stop
                 break
-           #cap = cv2.VideoCapture(video_stream_url)       
-            data, _ = video_sock.recvfrom(self.BUFFER_SIZE)
-            frame = np.frombuffer(data, dtype=np.uint8)  # Convert received data to a NumPy array
-            frame = cv2.imdecode(frame, cv2.IMREAD_COLOR)  # Decode image
-            #ret, frame = cap.read()
-            if frame is not None:
-                frame = cv2.resize(frame, (960, 720))
-                with self.frame_lock:
-                    self.frame = frame
+            ret, frame = cap.read()
+
+            if not ret:
+                logging.warning(f"Failed to grab frame from drone {droneid}")
+                continue
+          
+            frame = cv2.resize(frame, (960, 720))
+            with self.frame_lock:
+                self.frame_buffer.append(frame)  # Add frame to the buffer
+                self.frame = frame
+
                 #cv2.imshow(f"Drone {droneid}", self.frame)
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
-        video_sock.close()
+        cap.release()
         cv2.destroyAllWindows()
 
     def get_frame_read(self):
-        with self.frame_lock:
+       with self.frame_lock:
+            if len(self.frame_buffer) > 0:
+                return self.frame_buffer[-1]  # Return the most recent frame
             return self.frame
         
 
@@ -150,6 +155,8 @@ class myTello:
             self.frame = None
             self.frame_lock = Lock()
             self.video_thread = None
+            self.frame_buffer.clear()  # Clear the frame buffer
+
             logging.info("Stopped video stream")
     
     def emergency(self):
