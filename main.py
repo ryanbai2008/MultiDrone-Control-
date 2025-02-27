@@ -25,6 +25,7 @@ import avoid
 import re
 
 
+lock = threading.Lock()
 # Define the IP addresses of the two Wi-Fi adapters
 WIFI_ADAPTER_1_IP = "192.168.10.2"  # IP address of Wi-Fi Adapter 1 (connected to Drone 1)
 WIFI_ADAPTER_2_IP = "192.168.10.3"  # IP address of Wi-Fi Adapter 2 (connected to Drone 2)
@@ -176,6 +177,24 @@ def start_keep_alive(drone):
 keep_alive_thread1 = start_keep_alive(drone1)
 keep_alive_thread2 = start_keep_alive(drone2)
 
+def is_safe_to_fly():
+    # Check battery levels (both drones should have more than 20% battery)
+    battery1 = drone1.getBattery()
+    battery2 = drone2.getBattery()
+    if battery1 < 10 or battery2 < 10:
+        logging.warning(f"Low battery: Drone 1 ({battery1}%) or Drone 2 ({battery2}%)")
+        return False
+
+    # Check if drones are connected
+    if not drone1.getConnected() or not drone2.getConnected():
+        logging.error("One or both drones are not connected")
+        return False
+
+    # Additional checks can be added, such as GPS status, temperature, etc.
+
+    return True
+
+
 def move_tello(distance1, distance2, angle1, angle2):# Define the Tello IP and port
     # Take off both drones
     drone1.takeoff()
@@ -223,26 +242,27 @@ print(battery1)
 print(battery2)
 
 def updateScreen():
-    startingyaw1 = 0
-    startingyaw2 = 0
-    running = True
-    while running:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                running = False    
-        speedx1 = 10
-        speedx2 = 10
-        speedz1  = drone1.get_AngularSpeed(startingyaw1)
-        speedz2 =drone2.get_AngularSpeed(startingyaw2)
+    with lock:
+        startingyaw1 = 0
+        startingyaw2 = 0
+        running = True
+        while running:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    running = False    
+            speedx1 = 10
+            speedx2 = 10
+            speedz1  = drone1.get_AngularSpeed(startingyaw1)
+            speedz2 =drone2.get_AngularSpeed(startingyaw2)
 
-        battery1 = drone1.getBattery()
-        battery2 = drone2.getBattery()
+            battery1 = drone1.getBattery()
+            battery2 = drone2.getBattery()
 
-        height1 = drone1.getHeight()
-        height2 = drone2.getHeight()
+            height1 = drone1.getHeight()
+            height2 = drone2.getHeight()
 
-        startMap.start_screen(battery1, speedx1, speedz1, height1, battery2, speedx2, speedz2, height2)
-        sleep(10)
+            startMap.start_screen(battery1, speedx1, speedz1, height1, battery2, speedx2, speedz2, height2)
+            sleep(10)
 
 #creates a map of the environment on pygame
 pygame.init()
@@ -583,6 +603,9 @@ localizeThread = threading.Thread(target=localize)
 localizeThread.start()
 screenThread = threading.Thread(target=updateScreen)
 screenThread.start()
+if(not is_safe_to_fly()):
+    logging.error("Safety check failed. Drones will not take off.")
+    sys.exit(1)
 
 try:
     #turn on drones cameras
@@ -625,12 +648,13 @@ try:
 
     #drone heights
     time.sleep(1)
-    drone_height = 200
-    normal_height = 200
-    while drone1.getHeight() < normal_height:
-        drone1.send_rc(0, 0, 0, 20)
-    drone1.send_rc(0, 0, 0, 0)
-    go_up = 0
+    with lock:
+        drone_height = 200
+        normal_height = 200
+        while drone1.getHeight() < normal_height:
+            drone1.send_rc(0, 0, 0, 20)
+        drone1.send_rc(0, 0, 0, 0)
+        go_up = 0
 
     #total time elapsed
     start_time = time.time()
@@ -706,19 +730,20 @@ try:
                 #detect collision and manage heights
                 drone_height += go_up * sleep_time
                 print(f"drone height: {drone_height}, normal height: {normal_height}")
-                collision_check = drone_collision.detect_collision(drone_1_pos[0], drone_1_pos[1])
-                if collision_check == "collision":
-                    go_up = 40
-                elif collision_check == "no collision" and drone_height > normal_height * 1.1: #buffer
-                    go_up = -20
-                elif collision_check == "no collision" and drone_height < normal_height * 1.1: #buffer
-                    go_up = 20
-                else:
-                    go_up = 0
-                
-                if drone_height > 1.5 * normal_height:
-                    drone1.land()
-                    break
+                with lock:
+                    collision_check = drone_collision.detect_collision(drone_1_pos[0], drone_1_pos[1])
+                    if collision_check == "collision":
+                        go_up = 40
+                    elif collision_check == "no collision" and drone_height > normal_height * 1.1: #buffer
+                        go_up = -20
+                    elif collision_check == "no collision" and drone_height < normal_height * 1.1: #buffer
+                        go_up = 20
+                    else:
+                        go_up = 0
+                    
+                    if drone_height > 1.5 * normal_height:
+                        drone1.land()
+                        break
                 
                 print(f"updated  position: {drone_1_pos}")
             else:
@@ -735,6 +760,7 @@ try:
             #move drone and update values, already considered if drone terminated
             drone1.send_rc(drone_1_movement[0], drone_1_movement[1], go_up, turn_1)
             print(f"Drone 1 Position: {drone_1_pos}, Movement: {drone_1_movement}")
+            time.sleep(0.1)
 
             timer = time.time() #time for keeping track of how much to update drones positions
 

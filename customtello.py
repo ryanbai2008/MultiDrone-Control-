@@ -106,22 +106,29 @@ class myTello:
     # Function to decode and display the video stream
     def receive_video(self, droneid):
         video_stream_url = f'udp://@{self.wifi_adapter_ip}:{self.VIDEO_PORT}'
+        logging.info(f"Starting video stream for drone {droneid} at {self.TELLO_IP}:{self.VIDEO_PORT}")
+
+        video_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        video_sock.bind((self.wifi_adapter_ip, self.VIDEO_PORT))  # Bind the local video port
+    
             
             # Initialize the video capture object with the URL of the drone's video feed
-        cap = cv2.VideoCapture(video_stream_url)       
         while self.running:
             if self.stop_video:  # Check if the video stream should stop
                 break
-
-            ret, frame = cap.read()
-            if ret:
+           #cap = cv2.VideoCapture(video_stream_url)       
+            data, _ = video_sock.recvfrom(self.BUFFER_SIZE)
+            frame = np.frombuffer(data, dtype=np.uint8)  # Convert received data to a NumPy array
+            frame = cv2.imdecode(frame, cv2.IMREAD_COLOR)  # Decode image
+            #ret, frame = cap.read()
+            if frame is not None:
                 frame = cv2.resize(frame, (960, 720))
                 with self.frame_lock:
                     self.frame = frame
                 #cv2.imshow(f"Drone {droneid}", self.frame)
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
-        cap.release()
+        video_sock.close()
         cv2.destroyAllWindows()
 
     def get_frame_read(self):
@@ -167,6 +174,9 @@ class myTello:
         self.video_thread = None
         self.connected = False
         logging.info("Disconnected from drone")
+
+    def getConnected(self):
+        return self.connected
 
 
     def moveForward(self, distance):
@@ -277,25 +287,25 @@ class myTello:
         
         return angular_speed1
 
-class VideoProxyServer:
-    def __init__(self, drone_ips, server_ip, base_port):
-        self.drone_ips = drone_ips
-        self.server_ip = server_ip
-        self.base_port = base_port
+# class VideoProxyServer:
+#     def __init__(self, drone_ips, server_ip, base_port):
+#         self.drone_ips = drone_ips
+#         self.server_ip = server_ip
+#         self.base_port = base_port
 
-    def start_proxy(self):
-        for i, drone_ip in enumerate(self.drone_ips):
-            drone_port = 11111  # Tello video port
-            local_port = self.base_port + i
-            start = threading.Thread(target=self.proxy_video, args=(drone_ip, drone_port, local_port))
-            start.start()
+#     def start_proxy(self):
+#         for i, drone_ip in enumerate(self.drone_ips):
+#             drone_port = 11111  # Tello video port
+#             local_port = self.base_port + i
+#             start = threading.Thread(target=self.proxy_video, args=(drone_ip, drone_port, local_port))
+#             start.start()
 
-    def proxy_video(self, drone_ip, drone_port, local_port):
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.bind((self.server_ip, local_port))
-        drone_addr = (drone_ip, drone_port)
+#     def proxy_video(self, drone_ip, drone_port, local_port):
+#         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+#         sock.bind((self.server_ip, local_port))
+#         drone_addr = (drone_ip, drone_port)
 
-        while True:
-            data, _ = sock.recvfrom(4096)
-            sock.sendto(data, drone_addr)
+#         while True:
+#             data, _ = sock.recvfrom(4096)
+#             sock.sendto(data, drone_addr)
 
