@@ -111,8 +111,8 @@ class mapStart:
                         personpos.append(pos)
                         pygame.draw.circle(self.screen, (255, 255, 0), pos, 15) #To note where the person is 
                         font = pygame.font.SysFont('Times',25)
-                        intersectx = (int)((posx)/sizeCoeff)
-                        intersecty = (int)((screen_height  - posy)/sizeCoeff)
+                        intersectx = (int)((posx))
+                        intersecty = (int)((screen_height  - posy))
                         position_text = font.render(f'({intersectx}, {intersecty})cm', True, (255, 255, 0))
                         self.screen.blit(position_text, (posx+10, posy+10))
                         running = False

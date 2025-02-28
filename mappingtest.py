@@ -41,7 +41,7 @@ pygame.display.set_caption("Path Planning with Map (BRViz)")
 screen.fill((255, 255, 255))
 
 isRunning = True
-sizeCoeff = 400/42 # actual distance/pixel distance in cm (CHANGE THIS VALUE IF YOUR CHANGING THE MAP)
+sizeCoeff = 531.3/57 # actual distance/pixel distance in cm (CHANGE THIS VALUE IF YOUR CHANGING THE MAP)
 
 def scaleImgDown(img, scale_factor):
     original_width, original_height = img.get_size()
@@ -182,8 +182,8 @@ def drawPoints(screen, points, droneimg, yaw):
     pygame.draw.circle(screen, (0, 255, 0), points[-1], 3) #green dot on the image for tracking
     
     #adds positional text data, (0,0) is bottom left corner
-    x_cord = (int)((points[-1][0])/sizeCoeff)
-    y_cord  = (int)((screen_height  - points[-1][1])/sizeCoeff)
+    x_cord = (int)((points[-1][0]))
+    y_cord  = (int)((screen_height  - points[-1][1]))
     position_text = font.render(f'({x_cord}, {y_cord})cm', True, (255, 0, 0))
     screen.blit(position_text, (points[-1][0] + 10, points[-1][1] + 10))
 background = Background('pathPlanned2.png', [0, 0], 1)
@@ -208,8 +208,8 @@ end_pos2 = path2[1]
 drone1current_pos = list(start_pos1)
 drone1previous_pos = drone1current_pos.copy()
 
-linearSpeed = 500
-angularSpeed = 500
+linearSpeed = 200
+angularSpeed = 100
 
 timeDur = distanceInCm/linearSpeed
 rotationDur = angle/angularSpeed

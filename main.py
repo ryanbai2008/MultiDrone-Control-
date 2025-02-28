@@ -281,7 +281,7 @@ height1 = drone1.getHeight()
 height2 = drone2.getHeight()
 
 isRunning = True
-sizeCoeff = 400/42 # actual distance/pixel distance in cm (CHANGE THIS VALUE IF YOUR CHANGING THE MAP)
+sizeCoeff = 531.3/57 # actual distance/pixel distance in cm (CHANGE THIS VALUE IF YOUR CHANGING THE MAP)
 
 def scaleImgDown(img, scale_factor):
     original_width, original_height = img.get_size()
@@ -385,8 +385,8 @@ intersection = line_intersection(x1, y1, x2, y2, x3, y3, x4, y4)
 
 if intersection:
     font = pygame.font.SysFont('Times',25)
-    intersectx = (int)((intersection[0])/sizeCoeff)
-    intersecty = (int)((screen_height  - intersection[1])/sizeCoeff)
+    intersectx = (int)((intersection[0]))
+    intersecty = (int)((screen_height  - intersection[1]))
     position_text = font.render(f'({intersectx}, {intersecty})cm', True, (128, 0, 128))
     screen.blit(position_text, intersection)
     pygame.draw.circle(screen, (128, 0, 128), intersection, 6) #purple dot at intesection 
@@ -458,8 +458,8 @@ def drawPoints(screen, points, droneimg, yaw):
     pygame.draw.circle(screen, (0, 255, 0), points[-1], 3) #green dot on the image for tracking
     
     #adds positional text data, (0,0) is bottom left corner
-    x_cord = (int)((points[-1][0])/sizeCoeff)
-    y_cord  = (int)((screen_height  - points[-1][1])/sizeCoeff)
+    x_cord = (int)((points[-1][0]))
+    y_cord  = (int)((screen_height  - points[-1][1]))
     position_text = font.render(f'({x_cord}, {y_cord})cm', True, (255, 0, 0))
     screen.blit(position_text, (points[-1][0] + 10, points[-1][1] + 10))
 
@@ -486,8 +486,8 @@ def localize():
     drone1current_pos = list(start_pos1)
     drone1previous_pos = drone1current_pos.copy()
 
-    linearSpeed = 500
-    angularSpeed = 300
+    linearSpeed = 200
+    angularSpeed = 100
 
     timeDur = distanceInCm/linearSpeed
     rotationDur = angle/angularSpeed
