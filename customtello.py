@@ -50,6 +50,9 @@ class myTello:
 
     # Function to send command to Tello drone
     def send_command(self, command, retries=5):
+        if not self.sock:
+            logging.error("Socket not initialized. Cannot send command.")
+            self.init_socket()
         for attempt in range(retries):
             try:
                 self.sock.sendto(command.encode('utf-8'), (self.TELLO_IP, self.PORT))
@@ -123,7 +126,6 @@ class myTello:
                 logging.warning(f"Failed to grab frame from drone {droneid}")
                 continue
           
-            frame = cv2.resize(frame, (960, 720))
             with self.frame_lock:
                 self.frame_buffer.append(frame)  # Add frame to the buffer
                 self.frame = frame
@@ -138,8 +140,19 @@ class myTello:
        with self.frame_lock:
             if len(self.frame_buffer) > 0:
                 return self.frame_buffer[-1]  # Return the most recent frame
-            return self.frame
+            return None
         
+    # def get_frame_read(self):
+    #     # Try acquiring the lock without blocking
+    #     if self.frame_lock.acquire(blocking=False):  # Non-blocking lock acquisition
+    #         try:
+    #             if len(self.frame_buffer) > 0:
+    #                 return self.frame_buffer[-1]  # Return the most recent frame
+    #             return self.frame  # Return the current frame if buffer is empty
+    #         finally:
+    #             self.frame_lock.release()
+    #     else:
+    #         return None  # Return None if the lock was not acquired
 
         
     def stop_video_stream(self):
@@ -164,9 +177,13 @@ class myTello:
 
     #automatically turns stream on
     def start_video_thread(self, droneid):
-        self.running = True
-        self.video_thread = Thread(target=self.receive_video, args=(droneid,))
-        self.video_thread.start()
+        if not self.running:
+            self.running = True
+            self.video_thread = Thread(target=self.receive_video, args=(droneid,))
+            self.video_thread.start()
+            logging.info("Started video stream")
+        else:
+            logging.warning(f"Video stream already running for {droneid}")
 
     def end(self):
         self.stop_video_stream()  # stop video stream 
