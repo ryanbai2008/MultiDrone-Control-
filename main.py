@@ -12,7 +12,7 @@ import map
 from localizeIRT import localizer
 import socket
 import os
-from customtello import VideoProxyServer
+#from customtello import VideoProxyServer
 from customtello import myTello
 
 import path_planner
