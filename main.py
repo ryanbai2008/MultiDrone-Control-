@@ -262,7 +262,7 @@ def updateScreen():
             height2 = drone2.getHeight()
 
             startMap.start_screen(battery1, speedx1, speedz1, height1, battery2, speedx2, speedz2, height2)
-            sleep(10)
+            sleep(10) #updates every 10 seconds, just gets data doesnt need to be too often or too much cpu
 
 #creates a map of the environment on pygame
 pygame.init()
@@ -487,7 +487,7 @@ def localize():
     drone1previous_pos = drone1current_pos.copy()
 
     linearSpeed = 500
-    angularSpeed = 500
+    angularSpeed = 300
 
     timeDur = distanceInCm/linearSpeed
     rotationDur = angle/angularSpeed
@@ -788,5 +788,16 @@ except KeyboardInterrupt:
     drone2.streamoff()
     drone1.stop_drone_video()
     drone2.stop_drone_video()
+    sys.exit(1)
         #drone1.end()
         #drone2.end()
+
+except Exception as e:
+    logging.error(f"An error occurred: {e}")
+    drone1.land()
+    drone2.land()
+    drone1.streamoff()
+    drone2.streamoff()
+    drone1.stop_drone_video()
+    drone2.stop_drone_video()
+    sys.exit(1)  # Ensure the script exits
