@@ -10,6 +10,7 @@ import os
 import platform
 import subprocess
 from collections import deque
+import ffmpeg
 
 
 #set up logging
@@ -21,7 +22,6 @@ class myTello:
         self.TELLO_IP = "192.168.10.1"
         self.PORT = 8889
         self.BUFFER_SIZE = 65536  # 64 KB
-        self.VIDEO_PORT = video_port
         self.wifi_adapter_ip = wifi_adapter_ip
         self.sock = None
         self.frame = None
@@ -33,6 +33,9 @@ class myTello:
         self.connected = False
         self.frame_buffer = deque(maxlen=buffer_size)  # Frame buffer to store frames
         self.isOn = True
+        self.forward_port = video_port + 1000  # Assign a unique forwarding port
+        self.forwarding_thread = None
+
 
 
     # Initialize and bind the UDP socket
@@ -113,38 +116,62 @@ class myTello:
     def streamoff(self):
         self.send_command("streamoff")
 
+    def start_stream_forwarder(self):
+        def stream_forwarder():
+            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            sock.bind(("0.0.0.0", self.VIDEO_PORT))
+            forward_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            
+            while self.running:
+                data, _ = sock.recvfrom(2048)
+                forward_sock.sendto(data, ("127.0.0.1", self.forward_port))
+
+        self.forwarding_thread = threading.Thread(target=stream_forwarder, daemon=True)
+        self.forwarding_thread.start()
+        logging.info(f"Forwarding stream from {self.VIDEO_PORT} to {self.forward_port}")
+
+
     # Function to decode and display the video stream
     def receive_video(self, droneid):
-        
-        video_stream_url = f'udp://@0.0.0.0:11111'
-        logging.info(f"Starting video stream for drone {droneid} at {self.TELLO_IP}:{self.VIDEO_PORT}")
+        if not self.forwarding_thread or not self.forwarding_thread.is_alive():
+            self.start_stream_forwarder()
+            time.sleep(1)  # Allow time for stream forwarding to initialize
 
-            
+
+        video_stream_url = f"udp://@127.0.0.1:{self.forward_port}"  # Use forwarded stream
+        logging.info(f"Receiving video for drone {droneid} from {video_stream_url}")
+        process = (
+                    ffmpeg.input(video_stream_url)
+                    .output("pipe:", format="rawvideo", pix_fmt="bgr24")
+                    .run_async(pipe_stdout=True, pipe_stderr=True, quiet=True)
+                )
+        
             # Initialize the video capture object with the URL of the drone's video feed
-        cap = cv2.VideoCapture(video_stream_url)      
-        if not cap.isOpened():
-            logging.error(f"Failed to open video stream for drone {droneid}")
-            return
+        # cap = cv2.VideoCapture(video_stream_url)      
+        # if not cap.isOpened():
+        #     logging.error(f"Failed to open video stream for drone {droneid}")
+        #     return
 
 
         while self.running:
+            raw_frame = process.stdout.read(1280 * 720 * 3)
+
             if self.stop_video:  # Check if the video stream should stop
                 break
-            if ret:
-                ret, frame = cap.read()
+            if raw_frame:
+                frame = np.frombuffer(raw_frame, np.uint8).reshape((720, 1280, 3))
 
-            
                 with self.frame_lock:
-                    self.frame_buffer.append(frame)  # Add frame to the buffer
+                    self.frame_buffer.append(frame)
                     self.frame = frame
 
-                    cv2.imshow(f"Drone {droneid}", self.frame)
+                cv2.imshow(f"Drone {droneid}", self.frame)
             else: # If the frame is not read, stop the video stream
                 logging.error(f"Failed to read frame from drone {droneid}")
-                continue
+                
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
-        cap.release()
+        #cap.release()
         cv2.destroyAllWindows()
 
     def get_frame_read(self):
@@ -187,6 +214,7 @@ class myTello:
     def start_video_thread(self, droneid):
         if not self.running:
             self.running = True
+            self.start_stream_forwarder()  
             self.video_thread = Thread(target=self.receive_video, args=(droneid,))
             self.video_thread.start()
             logging.info("Started video stream")
@@ -318,6 +346,23 @@ class myTello:
         angular_speed1 = yaw_difference / 1  
         
         return angular_speed1
+    
+
+# Function to receive and forward Tello video stream
+def stream_forwarder(drone_ip, listen_port, forward_port):
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.bind((drone_ip, listen_port))
+
+    forward_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    
+    while True:
+        data, addr = sock.recvfrom(2048)  # Receive video packet
+        forward_sock.sendto(data, ("127.0.0.1", forward_port))  # Forward to local port
+
+# Start two threads for two drones
+threading.Thread(target=stream_forwarder, args=("0.0.0.0", 11111, 15000), daemon=True).start()
+threading.Thread(target=stream_forwarder, args=("0.0.0.0", 11111, 16000), daemon=True).start()
+
 
 # class VideoProxyServer:
 #     def __init__(self, drone_ips, server_ip, base_port):

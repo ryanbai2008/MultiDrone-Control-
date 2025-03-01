@@ -189,12 +189,12 @@ def is_safe_to_fly():
     return True
 
 
+running = True
 
 def updateScreen():
     with lock:
         startingyaw1 = 0
         startingyaw2 = 0
-        running = True
         while running:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -684,6 +684,7 @@ except KeyboardInterrupt:
     drone1.stop_drone_video()
     drone1.end()
     keep_alive_thread1.join()
+    running = False
 
     sys.exit(0)
         #drone1.end()
@@ -695,4 +696,5 @@ except Exception as e:
     drone1.stop_drone_video()
     drone1.isOn = False
     keep_alive_thread1.join()
+    running = False
     sys.exit(0)  # Ensure the script exits

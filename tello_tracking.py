@@ -13,6 +13,8 @@ class CV:
     
     def center_subject(self, img, drone_number):
         height, width, _ = img.shape
+        img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+
         blob = cv2.dnn.blobFromImage(img, 0.00392, (416, 416), (0, 0, 0), True, crop=False)
         self.net.setInput(blob)
         outs = self.net.forward(self.output_layers)
@@ -64,7 +66,7 @@ class CV:
             label = str(self.classes[class_ids[max_index]])
             confidence = str(round(confidences[max_index], 2))
             cv2.putText(new_img, f"{label} {confidence}", (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
-
+            
             # Display the image
             cv2.imshow("img" + str(drone_number), new_img)
             cv2.waitKey(1)
