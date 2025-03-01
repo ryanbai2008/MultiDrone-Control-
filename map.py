@@ -28,6 +28,10 @@ class mapStart:
         dot = (ax*bx) + (ay*by) #dot product
         magA = math.sqrt(ax**2 + ay**2)
         magB = math.sqrt(bx**2 + by**2)
+
+        if magA == 0 or magB == 0:
+                    return 0 
+
         rad = math.acos(dot/(magA*magB))
         self.angle = (rad * 360)/(2*math.pi) #convert to degree
 
@@ -111,8 +115,8 @@ class mapStart:
                         personpos.append(pos)
                         pygame.draw.circle(self.screen, (255, 255, 0), pos, 15) #To note where the person is 
                         font = pygame.font.SysFont('Times',25)
-                        intersectx = (int)((posx))
-                        intersecty = (int)((screen_height  - posy))
+                        intersectx = (int)((posx)*sizeCoeff)
+                        intersecty = (int)((screen_height  - posy)*sizeCoeff)
                         position_text = font.render(f'({intersectx}, {intersecty})cm', True, (255, 255, 0))
                         self.screen.blit(position_text, (posx+10, posy+10))
                         running = False

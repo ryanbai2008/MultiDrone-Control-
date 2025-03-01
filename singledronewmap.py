@@ -151,13 +151,13 @@ def add_route():
             run_command(f'sudo ip route add {TELLO_IP} via {WIFI_ADAPTER_2_IP} dev wlan1')
 
 # # Connect to Tello networks
-# connect_wifi(WIFI_1, "TELLO-D06F9F")
+connect_wifi(WIFI_1, "TELLO-D06F9F")
 
 # # Assign static IPs
-# set_static_ip(WIFI_1, WIFI_ADAPTER_1_IP)
+set_static_ip(WIFI_1, WIFI_ADAPTER_1_IP)
 
 # # Add route if necessary
-# add_route()
+add_route()
 
 #proxy_server = VideoProxyServer(drone_ips, server_ip, base_port)
 #proxy_server.start_proxy()
@@ -169,6 +169,7 @@ drone1.connect()
 
 
 def updateScreen():
+
     with lock:
         startingyaw1 = 0
         startingyaw2 = 0
@@ -562,7 +563,6 @@ try:
     ##############################
     facing_human = False
     while not facing_human:
-        time.sleep(0.5)
         #CV
         img1 = drone1.get_frame_read().frame
         if img1 is not None:
@@ -576,7 +576,6 @@ try:
                 facing_human = True
                 turn_1 = 0
             drone1.send_rc_control(0, 0, 0, turn_1)
-            time.sleep(0.3)
         else:
             logging.debug("No frame recieved")
 
@@ -643,7 +642,6 @@ try:
             #move drone and update values, already considered if drone terminated
             drone1.send_rc_control(drone_1_movement[0], drone_1_movement[1], go_up, turn_1)
             print(f"Drone 1 Position: {drone_1_pos}, Movement: {drone_1_movement}")
-            time.sleep(0.1)
 
             timer = time.time() #time for keeping track of how much to update drones positions
 

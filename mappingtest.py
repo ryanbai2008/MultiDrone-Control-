@@ -144,8 +144,8 @@ intersection = line_intersection(x1, y1, x2, y2, x3, y3, x4, y4)
 
 if intersection:
     font = pygame.font.SysFont('Times',25)
-    intersectx = (int)((intersection[0])/sizeCoeff)
-    intersecty = (int)((screen_height  - intersection[1])/sizeCoeff)
+    intersectx = (int)((intersection[0])*sizeCoeff)
+    intersecty = (int)((screen_height  - intersection[1])*sizeCoeff)
     position_text = font.render(f'({intersectx}, {intersecty})cm', True, (128, 0, 128))
     screen.blit(position_text, intersection)
     pygame.draw.circle(screen, (128, 0, 128), intersection, 6) #purple dot at intesection 
@@ -182,8 +182,8 @@ def drawPoints(screen, points, droneimg, yaw):
     pygame.draw.circle(screen, (0, 255, 0), points[-1], 3) #green dot on the image for tracking
     
     #adds positional text data, (0,0) is bottom left corner
-    x_cord = (int)((points[-1][0]))
-    y_cord  = (int)((screen_height  - points[-1][1]))
+    x_cord = (int)((points[-1][0])*sizeCoeff)
+    y_cord  = (int)((screen_height  - points[-1][1])*sizeCoeff)
     position_text = font.render(f'({x_cord}, {y_cord})cm', True, (255, 0, 0))
     screen.blit(position_text, (points[-1][0] + 10, points[-1][1] + 10))
 background = Background('pathPlanned2.png', [0, 0], 1)
