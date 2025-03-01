@@ -545,7 +545,6 @@ try:
     #turn on drones cameras
     drone1.streamon()
     drone1.start_video_thread(1)
-    drone1.takeoff()
 
     #path
     start_1_X, start_1_Y, end_1_X, end_1_Y = path[0][0], path[0][1], path[1][0], path[1][1]
@@ -576,10 +575,7 @@ try:
 
     #drone heights
     time.sleep(1)
-    drone_height = 150
-    normal_height = 150
-    go_up = 0
-
+   
     #total time elapsed
     start_time = time.time()
     total_time = 0
@@ -589,9 +585,9 @@ try:
     ##############################
     facing_human = False
     while not facing_human:
-        time.sleep(0.5)
         #CV
         img1 = drone1.get_frame_read()
+        time.sleep(0.1)
         if img1 is not None:
             logging.debug("Processed frame")
             turn_1 = drone_1_CV.center_subject(img1, 1)
@@ -602,7 +598,6 @@ try:
             elif turn_1 == 1: #human centered
                 facing_human = True
                 turn_1 = 0
-            drone1.send_rc(0, 0, 0, turn_1)
             time.sleep(0.3)
         else:
             logging.debug("No frame recieved")
@@ -652,8 +647,6 @@ try:
                 drone_1_pos[1] += delta_y * sleep_time
 
                 #detect collision and manage heights
-                drone_height += go_up * sleep_time
-                print(f"drone height: {drone_height}, normal height: {normal_height}")
                
                 print(f"updated  position: {drone_1_pos}")
             else:
@@ -668,7 +661,6 @@ try:
                 drone_1_movement[0], drone_1_movement[1] = 0, 0
             
             #move drone and update values, already considered if drone terminated
-            drone1.send_rc(drone_1_movement[0], drone_1_movement[1], go_up, turn_1)
             print(f"Drone 1 Position: {drone_1_pos}, Movement: {drone_1_movement}")
             time.sleep(0.1)
 
@@ -680,7 +672,6 @@ try:
     #clean up
     time.sleep(5)
     cv2.destroyAllWindows()
-    drone1.land()
     drone1.streamoff()
     drone1.stop_drone_video()
 
@@ -689,16 +680,19 @@ try:
 
 except KeyboardInterrupt:
     logging.info("KeyboardInterrupt received. Landing the drones...")
-    drone1.land()
     drone1.streamoff()
     drone1.stop_drone_video()
-    sys.exit(1)
+    drone1.end()
+    keep_alive_thread1.join()
+
+    sys.exit(0)
         #drone1.end()
         #drone2.end()
 
 except Exception as e:
     logging.error(f"An error occurred: {e}")
-    drone1.land()
     drone1.streamoff()
     drone1.stop_drone_video()
-    sys.exit(1)  # Ensure the script exits
+    drone1.isOn = False
+    keep_alive_thread1.join()
+    sys.exit(0)  # Ensure the script exits

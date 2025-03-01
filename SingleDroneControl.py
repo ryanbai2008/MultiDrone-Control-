@@ -7,7 +7,7 @@ import avoid
 import math
 
 #path
-start_1_X, start_1_Y, end_1_X, end_1_Y = 0, 0, 300, -300
+start_1_X, start_1_Y, end_1_X, end_1_Y = 0, 0, 200, -200
 path1 = [start_1_X, start_1_Y, end_1_X, end_1_Y]
 
 #other drone path

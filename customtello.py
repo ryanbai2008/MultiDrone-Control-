@@ -20,8 +20,8 @@ class myTello:
     def __init__(self, wifi_adapter_ip, video_port, buffer_size=5):
         self.TELLO_IP = "192.168.10.1"
         self.PORT = 8889
-        self.BUFFER_SIZE = 4096
-        self.VIDEO_PORT = 11111
+        self.BUFFER_SIZE = 65536  # 64 KB
+        self.VIDEO_PORT = video_port
         self.wifi_adapter_ip = wifi_adapter_ip
         self.sock = None
         self.frame = None
@@ -32,6 +32,7 @@ class myTello:
         self.VIDEO_PORT = video_port
         self.connected = False
         self.frame_buffer = deque(maxlen=buffer_size)  # Frame buffer to store frames
+        self.isOn = True
 
 
     # Initialize and bind the UDP socket
@@ -39,7 +40,7 @@ class myTello:
         if not self.sock:
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             try:
-                self.sock.bind((self.wifi_adapter_ip, 0))
+                self.sock.bind((self.wifi_adapter_ip, self.VIDEO_PORT))
             except Exception as e:
                 logging.error(f"Bind failed: {e}")
                 exit()
@@ -50,14 +51,14 @@ class myTello:
 
     # Function to send command to Tello drone
     def send_command(self, command, retries=5):
-        if not self.sock:
+        if self.sock is None or self.sock.fileno() == -1:
             logging.error("Socket not initialized. Cannot send command.")
             self.init_socket()
         for attempt in range(retries):
             try:
                 self.sock.sendto(command.encode('utf-8'), (self.TELLO_IP, self.PORT))
                 logging.info(f"Sent command to drone via {self.wifi_adapter_ip}: {command}")
-                self.sock.settimeout(2.0)  # Set a timeout for the response
+                self.sock.settimeout(5.0)  # Set a timeout for the response
                 response, _ = self.sock.recvfrom(self.BUFFER_SIZE)
                 response_decoded = response.decode('utf8') #gets the respond
                 logging.debug(f"Response: {response_decoded}")
@@ -96,9 +97,12 @@ class myTello:
 
     def keep_alive(self, interval=10):
         """Keeps the drone connection alive by sending 'battery?' command every few seconds."""
-        while self.connected:
+        while self.isOn:
             self.getBattery()
             time.sleep(interval)
+    
+    def off(self):
+        self.isOn = False
 
     def takeoff(self):
         self.send_command("takeoff")
@@ -111,26 +115,33 @@ class myTello:
 
     # Function to decode and display the video stream
     def receive_video(self, droneid):
-        video_stream_url = f'udp://@{self.wifi_adapter_ip}:{self.VIDEO_PORT}'
+        
+        video_stream_url = f'udp://@0.0.0.0:11111'
         logging.info(f"Starting video stream for drone {droneid} at {self.TELLO_IP}:{self.VIDEO_PORT}")
 
             
             # Initialize the video capture object with the URL of the drone's video feed
-        cap = cv2.VideoCapture(video_stream_url)       
+        cap = cv2.VideoCapture(video_stream_url)      
+        if not cap.isOpened():
+            logging.error(f"Failed to open video stream for drone {droneid}")
+            return
+
+
         while self.running:
             if self.stop_video:  # Check if the video stream should stop
                 break
-            ret, frame = cap.read()
+            if ret:
+                ret, frame = cap.read()
 
-            if not ret:
-                logging.warning(f"Failed to grab frame from drone {droneid}")
+            
+                with self.frame_lock:
+                    self.frame_buffer.append(frame)  # Add frame to the buffer
+                    self.frame = frame
+
+                    cv2.imshow(f"Drone {droneid}", self.frame)
+            else: # If the frame is not read, stop the video stream
+                logging.error(f"Failed to read frame from drone {droneid}")
                 continue
-          
-            with self.frame_lock:
-                self.frame_buffer.append(frame)  # Add frame to the buffer
-                self.frame = frame
-
-                #cv2.imshow(f"Drone {droneid}", self.frame)
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
         cap.release()
@@ -138,10 +149,7 @@ class myTello:
 
     def get_frame_read(self):
        with self.frame_lock:
-            if len(self.frame_buffer) > 0:
-                return self.frame_buffer[-1]  # Return the most recent frame
-            return None
-        
+           return self.frame
     # def get_frame_read(self):
     #     # Try acquiring the lock without blocking
     #     if self.frame_lock.acquire(blocking=False):  # Non-blocking lock acquisition

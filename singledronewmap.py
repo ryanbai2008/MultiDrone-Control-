@@ -13,7 +13,8 @@ from localizeIRT import localizer
 import socket
 import os
 #from customtello import VideoProxyServer
-from customtello import myTello
+from DJITelloPy import djitellopy 
+from DJITelloPy.djitellopy import Tello
 
 import path_planner
 import tello_tracking
@@ -149,44 +150,21 @@ def add_route():
         if not route_2_exists:
             run_command(f'sudo ip route add {TELLO_IP} via {WIFI_ADAPTER_2_IP} dev wlan1')
 
-# Connect to Tello networks
-connect_wifi(WIFI_1, "TELLO-D06F9F")
+# # Connect to Tello networks
+# connect_wifi(WIFI_1, "TELLO-D06F9F")
 
-# Assign static IPs
-set_static_ip(WIFI_1, WIFI_ADAPTER_1_IP)
+# # Assign static IPs
+# set_static_ip(WIFI_1, WIFI_ADAPTER_1_IP)
 
-# Add route if necessary
-add_route()
+# # Add route if necessary
+# add_route()
 
 #proxy_server = VideoProxyServer(drone_ips, server_ip, base_port)
 #proxy_server.start_proxy()
 
-drone1 = myTello(WIFI_ADAPTER_1_IP, base_port)
+drone1 = Tello()
 
 drone1.connect()
-
-
-def start_keep_alive(drone):
-    keep_alive_thread = threading.Thread(target=drone.keep_alive, daemon=True)
-    keep_alive_thread.start()
-    return keep_alive_thread
-keep_alive_thread1 = start_keep_alive(drone1)
-
-def is_safe_to_fly():
-    # Check battery levels (both drones should have more than 20% battery)
-    battery1 = drone1.getBattery()
-    if battery1 < 10:
-        logging.warning(f"Low battery: Drone 1 ({battery1}%) or Drone 2 (5%)")
-        return False
-
-    # Check if drones are connected
-    if not drone1.getConnected():
-        logging.error("One or both drones are not connected")
-        return False
-
-    # Additional checks can be added, such as GPS status, temperature, etc.
-
-    return True
 
 
 
@@ -201,11 +179,11 @@ def updateScreen():
                     running = False    
             speedx1 = 10
             speedx2 = 10
-            speedz1  = drone1.get_AngularSpeed(startingyaw1)
+            speedz1  = drone1.get_speed_y()
 
-            battery1 = drone1.getBattery()
+            battery1 = drone1.get_battery()
 
-            height1 = drone1.getHeight()
+            height1 = drone1.get_height()
 
             startMap.start_screen(battery1, speedx1, speedz1, height1, 62, speedx1 + 2, speedz1, height1+3)
             sleep(10) #updates every 10 seconds, just gets data doesnt need to be too often or too much cpu
@@ -217,10 +195,10 @@ screen_width, screen_height = pygame.display.get_surface().get_size()
 pygame.display.set_caption("Path Planning with Map (BRViz)")
 screen.fill((255, 255, 255))
 
-speedx1 = drone1.get_speed()
-speedz1 = drone1.get_AngularSpeed(0)
-battery1 = drone1.getBattery()
-height1 = drone1.getHeight()
+speedx1 = drone1.get_speed_x()
+speedz1 = drone1.get_speed_y()
+battery1 = drone1.get_battery()
+height1 = drone1.get_height()
 
 isRunning = True
 sizeCoeff = 531.3/57 # actual distance/pixel distance in cm (CHANGE THIS VALUE IF YOUR CHANGING THE MAP)
@@ -533,18 +511,13 @@ def localize():
   
     pygame.display.flip()
 
-# localizeThread = threading.Thread(target=localize)
-# localizeThread.start()
-# screenThread = threading.Thread(target=updateScreen)
-# # screenThread.start()
-# if(not is_safe_to_fly()):
-#     logging.error("Safety check failed. Drones will not take off.")
-#     sys.exit(1)
-
+localizeThread = threading.Thread(target=localize)
+localizeThread.start()
+screenThread = threading.Thread(target=updateScreen)
+screenThread.start()
 try:
     #turn on drones cameras
     drone1.streamon()
-    drone1.start_video_thread(1)
     drone1.takeoff()
 
     #path
@@ -591,7 +564,7 @@ try:
     while not facing_human:
         time.sleep(0.5)
         #CV
-        img1 = drone1.get_frame_read()
+        img1 = drone1.get_frame_read().frame
         if img1 is not None:
             logging.debug("Processed frame")
             turn_1 = drone_1_CV.center_subject(img1, 1)
@@ -602,7 +575,7 @@ try:
             elif turn_1 == 1: #human centered
                 facing_human = True
                 turn_1 = 0
-            drone1.send_rc(0, 0, 0, turn_1)
+            drone1.send_rc_control(0, 0, 0, turn_1)
             time.sleep(0.3)
         else:
             logging.debug("No frame recieved")
@@ -668,7 +641,7 @@ try:
                 drone_1_movement[0], drone_1_movement[1] = 0, 0
             
             #move drone and update values, already considered if drone terminated
-            drone1.send_rc(drone_1_movement[0], drone_1_movement[1], go_up, turn_1)
+            drone1.send_rc_control(drone_1_movement[0], drone_1_movement[1], go_up, turn_1)
             print(f"Drone 1 Position: {drone_1_pos}, Movement: {drone_1_movement}")
             time.sleep(0.1)
 
@@ -682,7 +655,6 @@ try:
     cv2.destroyAllWindows()
     drone1.land()
     drone1.streamoff()
-    drone1.stop_drone_video()
 
 
 
@@ -691,7 +663,6 @@ except KeyboardInterrupt:
     logging.info("KeyboardInterrupt received. Landing the drones...")
     drone1.land()
     drone1.streamoff()
-    drone1.stop_drone_video()
     sys.exit(1)
         #drone1.end()
         #drone2.end()
@@ -700,5 +671,4 @@ except Exception as e:
     logging.error(f"An error occurred: {e}")
     drone1.land()
     drone1.streamoff()
-    drone1.stop_drone_video()
     sys.exit(1)  # Ensure the script exits
