@@ -66,8 +66,7 @@ def connect_wifi(adapter, ssid):
     current_ssid = get_connected_ssid(adapter)
     
     if current_ssid == ssid:
-        print(f"{adapter} is already connected to {ssid}. Skipping connection.")
-        return
+        print(f"{adapter} is already connected to {ssid}. Skipping connection.") 
     
     print(f"Connecting {adapter} to {ssid}...")
     system = platform.system()

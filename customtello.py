@@ -43,7 +43,7 @@ class myTello:
         if not self.sock:
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             try:
-                self.sock.bind((self.wifi_adapter_ip, self.VIDEO_PORT))
+                self.sock.bind((self.wifi_adapter_ip, 0))
             except Exception as e:
                 logging.error(f"Bind failed: {e}")
                 exit()
@@ -118,13 +118,28 @@ class myTello:
 
     def start_stream_forwarder(self):
         def stream_forwarder():
+            """Forwards the video stream to a new local port."""
             sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            sock.bind(("0.0.0.0", self.VIDEO_PORT))
+
+            try:
+                sock.bind(("0.0.0.0", self.VIDEO_PORT))  # Each Tello gets a unique VIDEO_PORT
+                logging.info(f"Bound video stream on port {self.VIDEO_PORT}")
+            except OSError as e:
+                logging.error(f"Failed to bind port {self.VIDEO_PORT}: {e}")
+                return
+
             forward_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             
             while self.running:
-                data, _ = sock.recvfrom(2048)
-                forward_sock.sendto(data, ("127.0.0.1", self.forward_port))
+                try:
+                    data, _ = sock.recvfrom(2048)
+                    forward_sock.sendto(data, ("127.0.0.1", self.forward_port))
+                except Exception as e:
+                    logging.error(f"Error forwarding stream: {e}")
+                    break
+
+            sock.close()
+            forward_sock.close()
 
         self.forwarding_thread = threading.Thread(target=stream_forwarder, daemon=True)
         self.forwarding_thread.start()
@@ -348,20 +363,6 @@ class myTello:
         return angular_speed1
     
 
-# Function to receive and forward Tello video stream
-def stream_forwarder(drone_ip, listen_port, forward_port):
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock.bind((drone_ip, listen_port))
-
-    forward_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    
-    while True:
-        data, addr = sock.recvfrom(2048)  # Receive video packet
-        forward_sock.sendto(data, ("127.0.0.1", forward_port))  # Forward to local port
-
-# Start two threads for two drones
-threading.Thread(target=stream_forwarder, args=("0.0.0.0", 11111, 15000), daemon=True).start()
-threading.Thread(target=stream_forwarder, args=("0.0.0.0", 11111, 16000), daemon=True).start()
 
 
 # class VideoProxyServer:
