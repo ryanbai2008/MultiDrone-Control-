@@ -31,8 +31,8 @@ drone_1_terminate = False
 tello = djitellopy.Tello()
 tello.connect()
 tello.streamon()
-tello.takeoff()
-tello.send_rc_control(0, 0, 60, 0)
+#tello.takeoff()
+#tello.send_rc_control(0, 0, 60, 0)
 
 #timer for position updates
 sleep_time = 0
@@ -43,9 +43,9 @@ iter = 0
 time.sleep(1)
 drone_height = 200
 normal_height = 200
-while tello.get_height() < normal_height:
-    tello.send_rc_control(0, 0, 0, 20)
-tello.send_rc_control(0, 0, 0, 0)
+# while tello.get_height() < normal_height:
+#     tello.send_rc_control(0, 0, 0, 20)
+# tello.send_rc_control(0, 0, 0, 0)
 go_up = 0
 
 #total time elapsed
@@ -70,7 +70,7 @@ while not facing_human:
     elif turn_1 == 1: #human centered
         facing_human = True
         turn_1 = 0
-    tello.send_rc_control(0, 0, 0, turn_1)
+    #tello.send_rc_control(0, 0, 0, turn_1)
     time.sleep(0.3)
 
 print("\n\n\nnow moving paths\n\n\n")
@@ -144,7 +144,7 @@ while total_time < 60:
         drone_1_movement[0], drone_1_movement[1] = 0, 0
     
     #move drone and update values, already considered if drone terminated
-    tello.send_rc_control(drone_1_movement[0], drone_1_movement[1], go_up, turn_1)
+    #tello.send_rc_control(drone_1_movement[0], drone_1_movement[1], go_up, turn_1)
 
     timer = time.time() #time for keeping track of how much to update drones positions
 

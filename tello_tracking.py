@@ -13,7 +13,7 @@ class CV:
     
     def center_subject(self, img, drone_number):
         height, width, _ = img.shape
-        img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+        #img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
 
         blob = cv2.dnn.blobFromImage(img, 0.00392, (416, 416), (0, 0, 0), True, crop=False)
         self.net.setInput(blob)
@@ -47,6 +47,9 @@ class CV:
         # Resize image for faster display
         dim = (int(width / 4), int(height / 4))
         new_img = cv2.resize(img, dim)
+        window_name = f"img{drone_number}"
+        cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)  # Allow manual resizing
+        cv2.resizeWindow(window_name, dim[0], dim[1])  # Set window to match the resized image
 
         if len(confidences) > 0:
             max_index = np.argmax(confidences)
@@ -68,7 +71,7 @@ class CV:
             cv2.putText(new_img, f"{label} {confidence}", (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
             
             # Display the image
-            cv2.imshow("img" + str(drone_number), new_img)
+            cv2.imshow(window_name, new_img)
             cv2.waitKey(1)
             # Return movement based on object position
             if center_x > width / 2 + 80:
@@ -79,7 +82,7 @@ class CV:
             else:
                 return 1  # Go straight
 
-        cv2.imshow("img" + str(drone_number), new_img)
+        cv2.imshow("img" + str(drone_number), img)
         cv2.waitKey(1)
         return 0
 

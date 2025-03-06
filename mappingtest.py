@@ -84,7 +84,7 @@ personx, persony, personpospx = map2.addPerson(sizeCoeff)
 personpos = (personx, persony)
 
 startMap.changeInstruction("Moving Drones...")
-startMap.start_screen(82, 100, 10, 88, 50, 100, 12, 92)
+startMap.start_screen(100, 100, 30, 102, 12, 100, 12, 78)
 
 print(angle)
 print(distanceInCm)
@@ -208,8 +208,8 @@ end_pos2 = path2[1]
 drone1current_pos = list(start_pos1)
 drone1previous_pos = drone1current_pos.copy()
 
-linearSpeed = 200
-angularSpeed = 100
+linearSpeed = 140
+angularSpeed = 50
 
 timeDur = distanceInCm/linearSpeed
 rotationDur = angle/angularSpeed
