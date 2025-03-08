@@ -124,7 +124,6 @@ class myTello:
         self.send_command("streamoff")
 
     def end(self):
-        self.stop_video_stream()  # stop video stream 
         if self.video_thread is not None:
             self.running = False
             self.video_thread.join()
@@ -257,7 +256,7 @@ class myTello:
             return
 
         ffmpeg_cmd = [
-            "ffmpeg", "-i", f"udp://{self.TELLO_IP}:11111?fifo_size=1024&overrun_nonfatal=1",
+            "ffmpeg", "-i", f"udp://192.168.10.1:11111?localaddr={self.wifi_adapter_ip}&fifo_size=1024&overrun_nonfatal=1",
             "-fflags", "nobuffer", "-flags", "low_delay", 
             "-strict", "experimental", "-an", "-r", "15",
             "-f", "rawvideo", "-pix_fmt", "bgr24", 

@@ -258,17 +258,18 @@ class initializeMap:
         altitudeText = "Height: " + str(altitude1) + " cm"
         altitudeText = speedFont.render(altitudeText, True , (0, 0, 10)) 
         self.screen.blit(altitudeText, (70, 66))
-
-        if(batterylvl1 <= 5):
-            self.screen.blit(batterydead, (80, 0))  
-        elif(batterylvl1 <= 25):
-            self.screen.blit(batterylow, (80, 0))  
-        elif(batterylvl1<50):
-            self.screen.blit(batterymedium, (80, 0))  
-        elif(batterylvl1<80):
-            self.screen.blit(batteryhigh, (80, 0))  
-        else:
-            self.screen.blit(batteryfull, (80, 0))  
+        
+        if batterylvl1 is not None:
+            if(batterylvl1 <= 5):
+                self.screen.blit(batterydead, (80, 0))  
+            elif(batterylvl1 <= 25):
+                self.screen.blit(batterylow, (80, 0))  
+            elif(batterylvl1<50):
+                self.screen.blit(batterymedium, (80, 0))  
+            elif(batterylvl1<80):
+                self.screen.blit(batteryhigh, (80, 0))  
+            else:
+                self.screen.blit(batteryfull, (80, 0))  
 
         #SECOND DRONE
         tello2logo = pygame.image.load("tello2logo.png")  # Replace with the path to your image file
@@ -292,13 +293,14 @@ class initializeMap:
         altitudeText2 = speedFont.render(altitudeText2, True , (0, 0, 10)) 
         self.screen.blit(altitudeText2, (screen_width-145, 66))
 
-        if(batterylvl2 <= 5):
-            self.screen.blit(batterydead, (screen_width-110, 0))  
-        elif(batterylvl2 <= 25):
-            self.screen.blit(batterylow, (screen_width-110, 0))  
-        elif(batterylvl2<50):
-            self.screen.blit(batterymedium, (screen_width-110, 0))  
-        elif(batterylvl2<80):
-            self.screen.blit(batteryhigh, (screen_width-110, 0))  
-        else:
-            self.screen.blit(batteryfull, (screen_width-110, 0))  
+        if batterylvl2 is not None:
+            if(batterylvl2 <= 5):
+                self.screen.blit(batterydead, (screen_width-110, 0))  
+            elif(batterylvl2 <= 25):
+                self.screen.blit(batterylow, (screen_width-110, 0))  
+            elif(batterylvl2<50):
+                self.screen.blit(batterymedium, (screen_width-110, 0))  
+            elif(batterylvl2<80):
+                self.screen.blit(batteryhigh, (screen_width-110, 0))  
+            else:
+                self.screen.blit(batteryfull, (screen_width-110, 0))  

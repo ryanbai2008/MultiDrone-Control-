@@ -151,7 +151,7 @@ def add_route():
 
 # Connect to Tello networks
 connect_wifi(WIFI_1, "TELLO-D06F9F")
-connect_wifi(WIFI_2, "TELLO-EE4263")
+connect_wifi(WIFI_2, "TELLO-EE4263 2")
 
 # Assign static IPs
 set_static_ip(WIFI_1, WIFI_ADAPTER_1_IP)
@@ -197,7 +197,7 @@ def is_safe_to_fly():
 
 def move_tello(distance1, distance2, angle1, angle2):# Define the Tello IP and port
     # Take off both drones
-    drone1.takeoff()
+    #drone1.takeoff()
     time.sleep(5)
 
     #rotates the first drone
@@ -486,13 +486,14 @@ def localize():
     drone1current_pos = list(start_pos1)
     drone1previous_pos = drone1current_pos.copy()
 
-    linearSpeed = 200
+    linearSpeed1 = speedx1
+    linearSpeed2 = speedx2
     angularSpeed = 100
 
-    timeDur = distanceInCm/linearSpeed
+    timeDur = distanceInCm/linearSpeed1
     rotationDur = angle/angularSpeed
 
-    timeDur2 = distanceInCm2/linearSpeed
+    timeDur2 = distanceInCm2/linearSpeed2
     rotationDur2 = angle2/angularSpeed
 
     drone1num_steps = int(timeDur / updateTime)
@@ -611,10 +612,10 @@ try:
     #turn on drones cameras
     drone1.streamon()
     drone2.streamon()
-    drone1.start_video_thread(1)
-    drone2.start_video_thread(2)
-    drone1.takeoff()
-    drone2.takeoff()
+    drone1.start_video_stream()
+    drone2.start_video_stream()
+    #drone1.takeoff()
+    #drone2.takeoff()
 
     #path
     start_1_X, start_1_Y, end_1_X, end_1_Y = path[0][0], path[0][1], path[1][0], path[1][1]
