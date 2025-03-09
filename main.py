@@ -486,14 +486,13 @@ def localize():
     drone1current_pos = list(start_pos1)
     drone1previous_pos = drone1current_pos.copy()
 
-    linearSpeed1 = speedx1
-    linearSpeed2 = speedx2
+    linearSpeed = 200
     angularSpeed = 100
 
-    timeDur = distanceInCm/linearSpeed1
+    timeDur = distanceInCm/linearSpeed
     rotationDur = angle/angularSpeed
 
-    timeDur2 = distanceInCm2/linearSpeed2
+    timeDur2 = distanceInCm2/linearSpeed
     rotationDur2 = angle2/angularSpeed
 
     drone1num_steps = int(timeDur / updateTime)
@@ -775,8 +774,6 @@ try:
     drone2.land()
     drone1.streamoff()
     drone2.streamoff()
-    drone1.stop_drone_video()
-    drone2.stop_drone_video()
 
 
 
@@ -787,8 +784,7 @@ except KeyboardInterrupt:
     drone2.land()
     drone1.streamoff()
     drone2.streamoff()
-    drone1.stop_drone_video()
-    drone2.stop_drone_video()
+   
     sys.exit(1)
         #drone1.end()
         #drone2.end()
@@ -799,6 +795,5 @@ except Exception as e:
     drone2.land()
     drone1.streamoff()
     drone2.streamoff()
-    drone1.stop_drone_video()
-    drone2.stop_drone_video()
+ 
     sys.exit(1)  # Ensure the script exits
