@@ -710,6 +710,10 @@ try:
         else:
             logging.debug("No frame recieved for drone 2")
         time.sleep(0.1)
+
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+
         
 
     print("\n\n\nnow moving paths\n\n\n")
@@ -851,6 +855,10 @@ try:
             time.sleep(0.1)
 
             timer = time.time() #time for keeping track of how much to update drones positions
+            
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+
     
     #clean up
     time.sleep(5)
