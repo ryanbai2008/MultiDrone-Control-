@@ -702,8 +702,8 @@ try:
         total_time = time.time() - start_time
 
         #CV
-        img1 = drone1.get_frame_read().frame
-        img2 = drone2.get_frame_read().frame
+        img1 = drone1.get_frame_read()
+        img2 = drone2.get_frame_read()
 
         if img1 is not None:
             logging.debug("Processed frame")
