@@ -208,23 +208,26 @@ end_pos2 = path2[1]
 drone1current_pos = list(start_pos1)
 drone1previous_pos = drone1current_pos.copy()
 
-linearSpeed = 140
+linearSpeed = 200
 angularSpeed = 50
 
 timeDur = distanceInCm/linearSpeed
+if(angle<0):
+    angle = 360 + angle
+if(angle<0):
+    angle = 360 + angle
 rotationDur = angle/angularSpeed
 
 timeDur2 = distanceInCm2/linearSpeed
 rotationDur2 = angle2/angularSpeed
 
 drone1num_steps = int(timeDur / updateTime)
-drone1angle_num_steps = abs(int(rotationDur / angleUpdateTime))
+drone1angle_num_steps = 100
 
 drone2current_pos = list(start_pos2)
 drone2previous_pos= drone2current_pos.copy()
 drone2num_steps = int(timeDur2 / updateTime)
-drone2angle_num_steps = abs(int(rotationDur2 / angleUpdateTime))
-
+drone2angle_num_steps = 100
 
 # Calculate the increments in x and y directions
 dx1 = (end_pos1[0] - start_pos1[0]) / drone1num_steps
@@ -266,8 +269,13 @@ while running:
 
     if rotating1:
         if yaw1 != target_yaw1:
-            yaw1 += (((target_yaw1) - initial_yaw) / drone1angle_num_steps)
-            if abs(yaw1 - target_yaw1) < 0.1:
+            if yaw1 < 0:
+                yaw1 += 360
+                # Ensure clockwise rotation
+            if yaw1 > 180:
+                yaw1 -= 360
+            yaw1 += abs(((target_yaw1) - initial_yaw) / drone1angle_num_steps)
+            if abs(yaw1 - target_yaw1) < 1:
                 yaw1 = target_yaw1  # Snap to target yaw if close
                 rotating1 = False
     else:
@@ -283,8 +291,13 @@ while running:
 
     if rotating2:
         if yaw2 != target_yaw2:
-            yaw2 += ((target_yaw2) - initial_yaw) / drone2angle_num_steps
-            if abs(yaw2 - target_yaw2) < 0.1:
+            if yaw2 < 0:
+                yaw2 += 360
+                # Ensure clockwise rotation
+            if yaw2 > 180:
+                yaw2 -= 360
+            yaw2 += abs((target_yaw2) - initial_yaw) / drone2angle_num_steps
+            if abs(yaw2 - target_yaw2) < 1:
                 yaw2 = target_yaw2  # Snap to target yaw if close
                 rotating2 = False
     else:

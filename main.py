@@ -245,24 +245,20 @@ def updateScreen():
     with lock:
         startingyaw1 = 0
         startingyaw2 = 0
-        running = True
-        while running:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    running = False    
-            speedx1 = 10
-            speedx2 = 10
-            speedz1  = drone1.get_AngularSpeed(startingyaw1)
-            speedz2 =drone2.get_AngularSpeed(startingyaw2)
+         
+        speedx1 = drone1.get_speed()
+        speedx2 = drone2.get_speed()
+        speedz1  = drone1.get_AngularSpeed(startingyaw1)
+        speedz2 = drone2.get_AngularSpeed(startingyaw2)
 
-            battery1 = drone1.getBattery()
-            battery2 = drone2.getBattery()
+        battery1 = drone1.getBattery()
+        battery2 = drone2.getBattery()
 
-            height1 = drone1.getHeight()
-            height2 = drone2.getHeight()
+        height1 = drone1.getHeight()
+        height2 = drone2.getHeight()
 
-            startMap.start_screen(battery1, speedx1, speedz1, height1, battery2, speedx2, speedz2, height2)
-            sleep(10) #updates every 10 seconds, just gets data doesnt need to be too often or too much cpu
+        startMap.start_screen(battery1, speedx1, speedz1, height1, battery2, speedx2, speedz2, height2)
+        sleep(0.5) #updates every 10 seconds, just gets data doesnt need to be too often or too much cpu
 
 #creates a map of the environment on pygame
 pygame.init()
@@ -430,10 +426,11 @@ drone_2_movement = [0, 0]
 
 
 #path planning objects and CV objects
-drone_1_path_plan = path_planner.PathPlan(start_pos1X, end_pos1X, start_pos1Y, end_pos1Y, drone_1_pos[2]) #########place both drones facing to the right facing horizontally
-drone_2_path_plan = path_planner.PathPlan(start_pos2X, end_pos2X, start_pos2Y, end_pos2Y, drone_2_pos[2])
-drone1_CV = tello_tracking.CV()
-drone2_CV = tello_tracking.CV()
+#drone_1_path_plan = path_planner.PathPlan(start_pos1X, end_pos1X, start_pos1Y, end_pos1Y, drone_1_pos[2]) #########place both drones facing to the right facing horizontally
+#drone_2_path_plan = path_planner.PathPlan(start_pos2X, end_pos2X, start_pos2Y, end_pos2Y, drone_2_pos[2])
+#drone1_CV = tello_tracking.CV()
+#drone2_CV = tello_tracking.CV()
+
 
 #has goal been reached for drones
 drone_1_terminate = False
@@ -487,7 +484,7 @@ def localize():
     drone1previous_pos = drone1current_pos.copy()
 
     linearSpeed = 200
-    angularSpeed = 100
+    angularSpeed = 50
 
     timeDur = distanceInCm/linearSpeed
     rotationDur = angle/angularSpeed
@@ -496,12 +493,12 @@ def localize():
     rotationDur2 = angle2/angularSpeed
 
     drone1num_steps = int(timeDur / updateTime)
-    drone1angle_num_steps = abs(int(rotationDur / angleUpdateTime))
+    drone1angle_num_steps = 100
 
     drone2current_pos = list(start_pos2)
     drone2previous_pos= drone2current_pos.copy()
     drone2num_steps = int(timeDur2 / updateTime)
-    drone2angle_num_steps = abs(int(rotationDur2 / angleUpdateTime))
+    drone2angle_num_steps = 100
 
 
     # Calculate the increments in x and y directions
@@ -540,13 +537,18 @@ def localize():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False    
-
+        updateScreen()
         screen.blit(background.image, (0, 0))    
 
         if rotating1:
             if yaw1 != target_yaw1:
-                yaw1 += (((target_yaw1) - initial_yaw) / drone1angle_num_steps)
-                if abs(yaw1 - target_yaw1) < 0.1:
+                if yaw1 < 0:
+                    yaw1 += 360
+                    # Ensure clockwise rotation
+                if yaw1 > 180:
+                    yaw1 -= 360
+                yaw1 += abs(((target_yaw1) - initial_yaw) / drone1angle_num_steps)
+                if abs(yaw1 - target_yaw1) < 1:
                     yaw1 = target_yaw1  # Snap to target yaw if close
                     rotating1 = False
         else:
@@ -562,8 +564,13 @@ def localize():
 
         if rotating2:
             if yaw2 != target_yaw2:
-                yaw2 += ((target_yaw2) - initial_yaw) / drone2angle_num_steps
-                if abs(yaw2 - target_yaw2) < 0.1:
+                if yaw2 < 0:
+                    yaw2 += 360
+                    # Ensure clockwise rotation
+                if yaw2 > 180:
+                    yaw2 -= 360
+                yaw2 += abs((target_yaw2) - initial_yaw) / drone2angle_num_steps
+                if abs(yaw2 - target_yaw2) < 1:
                     yaw2 = target_yaw2  # Snap to target yaw if close
                     rotating2 = False
         else:
@@ -601,11 +608,13 @@ def localize():
 
 localizeThread = threading.Thread(target=localize)
 localizeThread.start()
-screenThread = threading.Thread(target=updateScreen)
-screenThread.start()
-if(not is_safe_to_fly()):
-    logging.error("Safety check failed. Drones will not take off.")
-    sys.exit(1)
+# screenThread = threading.Thread(target=updateScreen)
+# screenThread.start()
+# if(not is_safe_to_fly()):
+#     logging.error("Safety check failed. Drones will not take off.")
+#     sys.exit(1)
+normal_height = 200
+
 
 try:
     #turn on drones cameras
@@ -634,6 +643,8 @@ try:
     drone_1_path_plan = path_planner.PathPlan(path1[0], path1[2], path1[1], path1[3], drone_1_pos[2])
     drone_2_path_plan = path_planner.PathPlan(path_2[0], path_2[2], path_2[1], path_2[3], drone_2_pos[2])
     drone_1_CV = tello_tracking.CV()
+    drone_2_CV = tello_tracking.CV()
+
     drone_collision = avoid.Avoid(path1, path_2)
 
     #goal reached for drones?
@@ -664,12 +675,12 @@ try:
     facing_human_2 = False
     while (not facing_human_1) or (not facing_human_2):
         #CV
-        img1 = drone1.get_frame_read().frame
-        img2 = drone2.get_frame_read().frame
+        img1 = drone1.get_frame_read()
+        img2 = drone2.get_frame_read()
+
         if img1 is not None:
-            logging.debug("Processed frame")
+            logging.debug("Processed frame for drone 1")
             turn_1 = drone_1_CV.center_subject(img1, 1)
-            turn_2 = drone_1_CV.center_subject(img2, 2)
 
             #turn 1
             if turn_1 == 0: #if no human detected, continue turning
@@ -678,7 +689,13 @@ try:
                 facing_human_1 = True
                 turn_1 = 0
             drone1.send_rc(0, 0, 0, turn_1)
-            
+        else:
+            logging.debug("No frame recieved for drone 1")
+
+        if img2 is not None:
+            logging.debug("Processed frame for drone 2")
+            turn_2 = drone_2_CV.center_subject(img2, 2)
+
             #turn 2
             if turn_2 == 0: #if no human detected, continue turning
                 turn_2 = 25
@@ -687,8 +704,9 @@ try:
                 turn_2 = 0
             drone2.send_rc(0, 0, 0, turn_2)
         else:
-            logging.debug("No frame recieved")
+            logging.debug("No frame recieved for drone 2")
         time.sleep(0.1)
+        
 
     print("\n\n\nnow moving paths\n\n\n")
     ##############################
@@ -706,28 +724,21 @@ try:
         img2 = drone2.get_frame_read()
 
         if img1 is not None:
-            logging.debug("Processed frame")
+            logging.debug("Processed frame for drone 1")
             turn_1 = drone_1_CV.center_subject(img1, 1)
-            turn_2 = drone_1_CV.center_subject(img2, 2)
             if turn_1 == 1:
                 turn_1 = 0 #if subject centered, no turn
-            if turn_2 == 1:
-                turn_2 = 0 #if subject centered, no turn
-            
-
             #update timer
             if iter == 0:
                 sleep_time = 0 #do not update positions for the first loop
                 iter += 1
             else:
                 sleep_time = time.time() - timer
-            
-
-            if (not drone_1_terminate) or (not drone_2_terminate):
+                
+            if (not drone_1_terminate):
                 #calculate new angle
                 print(f"updating position: {drone_1_pos}")
                 drone_1_pos[2] = -1 * drone1.get_yaw()
-                drone_2_pos[2] = -1 * drone2.get_yaw()
 
                 #calculate new position
                 theta_x_component_change = 0
@@ -742,6 +753,47 @@ try:
                 drone_1_pos[0] += delta_x * sleep_time
                 drone_1_pos[1] += delta_y * sleep_time
 
+                        #detect collision and manage heights
+                drone_height += go_up * sleep_time
+                print(f"drone height: {drone_height}, normal height: {normal_height}")
+                collision_check = drone_collision.detect_collision(drone_1_pos[0], drone_1_pos[1])
+                if collision_check == "collision":
+                    go_up = 40
+                elif collision_check == "no collision" and drone_height > normal_height * 1.1: #buffer
+                    go_up = -20
+                elif collision_check == "no collision" and drone_height < normal_height * 1.1: #buffer
+                    go_up = 20
+                else:
+                    go_up = 0
+                
+                if drone_height > 1.5 * normal_height:
+                    drone1.land()
+                    break
+            drone_1_movement = drone_1_path_plan.move_towards_goal(drone_1_pos[0], drone_1_pos[1], drone_1_pos[2], drone_1_terminate)
+            if drone_1_movement[0] == 0.1:
+                            drone_1_terminate = True
+                            print("\n\n\nnow stopping drone movement drone 1\n\n\n")
+                            drone_1_movement[0], drone_1_movement[1] = 0, 0
+            drone1.send_rc(drone_1_movement[0], drone_1_movement[1], go_up, turn_1)
+            print(f"Drone 1 Position: {drone_1_pos}, Movement: {drone_1_movement}")
+            time.sleep(0.1)
+            timer = time.time() #time for keeping track of how much to update drones positions
+
+        if img2 is not None:
+            logging.debug("Processed frame for drone 2")
+            turn_2 = drone_2_CV.center_subject(img2, 2)
+
+            if turn_2 == 1:
+                turn_2 = 0 #if subject centered, no turn
+             #update timer
+            if iter == 0:
+                sleep_time = 0 #do not update positions for the first loop
+                iter += 1
+            else:
+                sleep_time = time.time() - timer
+
+            if(not drone_2_terminate):
+                drone_2_pos[2] = -1 * drone2.get_yaw()
                 #calculate new position
                 theta_x_component_change = 0
                 if drone_2_movement[0] > 0:
@@ -779,30 +831,21 @@ try:
             #     drone_1_pos[2] = -1 * drone1.get_yaw()
 
             #path planning
-            drone_1_movement = drone_1_path_plan.move_towards_goal(drone_1_pos[0], drone_1_pos[1], drone_1_pos[2], drone_1_terminate)
             drone_2_movement = drone_2_path_plan.move_towards_goal(drone_2_pos[0], drone_2_pos[1], drone_2_pos[2], drone_2_terminate)
 
             #reached goal?
-            if drone_1_movement[0] == 0.1:
-                drone_1_terminate = True
-                print("\n\n\nnow stopping drone movement drone 1\n\n\n")
-                drone_1_movement[0], drone_1_movement[1] = 0, 0
+           
             if drone_2_movement[0] == 0.1:
                 drone_2_terminate = True
                 print("\n\n\nnow stopping drone movement drone 2\n\n\n")
                 drone_2_movement[0], drone_2_movement[1] = 0, 0
             
             #move drone and update values, already considered if drone terminated
-            drone1.send_rc(drone_1_movement[0], drone_1_movement[1], go_up, turn_1)
             drone2.send_rc(drone_2_movement[0], drone_2_movement[1], go_up, turn_2)
-            print(f"Drone 1 Position: {drone_1_pos}, Movement: {drone_1_movement}")
             print(f"Drone 2 Position: {drone_2_pos}, Movement: {drone_2_movement}")
             time.sleep(0.1)
 
             timer = time.time() #time for keeping track of how much to update drones positions
-
-        else: 
-            logging.debug("no frame recieved")
 
     #clean up
     time.sleep(5)

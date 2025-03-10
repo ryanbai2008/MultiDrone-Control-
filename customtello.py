@@ -181,13 +181,21 @@ class myTello:
     def get_yaw(self):
         imudata = self.get_command("attitude?")
         print(imudata)
-        match = re.search(r'yaw:\s*(-?\d+\.?\d*)', imudata)
 
-        if match:
-            # Extract and return the yaw value from the matched group
-            current_yaw = float(match.group(1))  # The captured yaw value
-            logging.info(f"Current Yaw: {current_yaw}")
-            return current_yaw
+        try:
+            match = re.search(r"yaw:(-?\d+)", imudata)
+
+            if match:
+                # Extract and return the yaw value from the matched group
+                current_yaw = float(match.group(1))  # The captured yaw value
+                logging.info(f"Current Yaw: {current_yaw}")
+                return current_yaw
+            else:
+                logging.error(f"Could not parse battery from response: {imudata}")
+                return None
+        except Exception as e:
+            logging.error(f"Error parsing yaw: {e}")
+            return None
        
         # Calculate the change in yaw
 
@@ -234,19 +242,20 @@ class myTello:
             return None
         
     def get_AngularSpeed(self, startingyaw):
-        currentyaw = 0
-
+        currentyaw = self.get_yaw()
+        if(currentyaw is not None):
         # Calculate the change in yaw
-        yaw_difference = currentyaw - startingyaw
+            yaw_difference = currentyaw - startingyaw
 
-        # Handle potential yaw wraparound (like from 360° back to 0°)
-        if yaw_difference > 180:
-            yaw_difference -= 360
-        elif yaw_difference < -180:
-            yaw_difference += 360
-        angular_speed1 = yaw_difference / 1  
-        
-        return angular_speed1
+            # Handle potential yaw wraparound (like from 360° back to 0°)
+            if yaw_difference > 180:
+                yaw_difference -= 360
+            elif yaw_difference < -180:
+                yaw_difference += 360
+            angular_speed1 = yaw_difference / 1  
+            
+            return angular_speed1
+        return 0
     
 
     def start_video_stream(self):
