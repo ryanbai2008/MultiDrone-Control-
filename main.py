@@ -625,36 +625,33 @@ try:
 
     #drone current values
     drone_1_pos = [path1[0], path1[1], 0] #(X, Y, angle), STARTING ANGLE MUST BE 0 DEGREES
+    drone_2_pos = [path_2[0], path_2[1], 0]
 
     #drone movement
     drone_1_movement = [0, 0, 0] #(delta X, delta Y, delta angle)
 
     #path planning and CV and collision objects
     drone_1_path_plan = path_planner.PathPlan(path1[0], path1[2], path1[1], path1[3], drone_1_pos[2])
+    drone_2_path_plan = path_planner.PathPlan(path_2[0], path_2[2], path_2[1], path_2[3], drone_2_pos[2])
     drone_1_CV = tello_tracking.CV()
     drone_collision = avoid.Avoid(path1, path_2)
 
     #goal reached for drones?
     drone_1_terminate = False
+    drone_2_terminate = False
 
     #turn on drone
 
-    drone1.send_rc(0, 0, 60, 0)
+    drone1.send_rc(0, 0, 40, 0)
+    drone2.send_rc(0, 0, 40, 0)
+    time.sleep(1.5)
+    drone1.send_rc(0, 0, 0, 0)
+    drone2.send_rc(0, 0, 0, 0)
 
     #timer for position updates
     sleep_time = 0
     timer = 0
     iter = 0
-
-    #drone heights
-    time.sleep(1)
-    with lock:
-        drone_height = 200
-        normal_height = 200
-        while drone1.getHeight() < normal_height:
-            drone1.send_rc(0, 0, 0, 20)
-        drone1.send_rc(0, 0, 0, 0)
-        go_up = 0
 
     #total time elapsed
     start_time = time.time()
@@ -663,45 +660,61 @@ try:
     ##############################
     ##Drone initial orientation###
     ##############################
-    facing_human = False
-    while not facing_human:
-
+    facing_human_1 = False
+    facing_human_2 = False
+    while (not facing_human_1) or (not facing_human_2):
         #CV
-        img1 = drone1.get_frame_read()
+        img1 = drone1.get_frame_read().frame
+        img2 = drone2.get_frame_read().frame
         if img1 is not None:
             logging.debug("Processed frame")
             turn_1 = drone_1_CV.center_subject(img1, 1)
+            turn_2 = drone_1_CV.center_subject(img2, 2)
 
-            #turn
+            #turn 1
             if turn_1 == 0: #if no human detected, continue turning
                 turn_1 = 25
             elif turn_1 == 1: #human centered
-                facing_human = True
+                facing_human_1 = True
                 turn_1 = 0
             drone1.send_rc(0, 0, 0, turn_1)
-            time.sleep(0.3)
+            
+            #turn 2
+            if turn_2 == 0: #if no human detected, continue turning
+                turn_2 = 25
+            elif turn_2 == 1: #human centered
+                facing_human_2 = True
+                turn_2 = 0
+            drone2.send_rc(0, 0, 0, turn_2)
         else:
             logging.debug("No frame recieved")
+        time.sleep(0.1)
 
     print("\n\n\nnow moving paths\n\n\n")
     ##############################
     #########Path Planning########
     ##############################
     drone_1_pos[2] = -1 * drone1.get_yaw()
+    drone_2_pos[2] = -1 * drone2.get_yaw()
 
     while total_time < 60:
         #update total time
         total_time = time.time() - start_time
 
         #CV
-        
-        img1 = drone1.get_frame_read()
+        img1 = drone1.get_frame_read().frame
+        img2 = drone2.get_frame_read().frame
+
         if img1 is not None:
             logging.debug("Processed frame")
             turn_1 = drone_1_CV.center_subject(img1, 1)
+            turn_2 = drone_1_CV.center_subject(img2, 2)
             if turn_1 == 1:
-                turn_1 = 0
+                turn_1 = 0 #if subject centered, no turn
+            if turn_2 == 1:
+                turn_2 = 0 #if subject centered, no turn
             
+
             #update timer
             if iter == 0:
                 sleep_time = 0 #do not update positions for the first loop
@@ -709,10 +722,12 @@ try:
             else:
                 sleep_time = time.time() - timer
             
-            if not drone_1_terminate:
+
+            if (not drone_1_terminate) or (not drone_2_terminate):
                 #calculate new angle
                 print(f"updating position: {drone_1_pos}")
                 drone_1_pos[2] = -1 * drone1.get_yaw()
+                drone_2_pos[2] = -1 * drone2.get_yaw()
 
                 #calculate new position
                 theta_x_component_change = 0
@@ -727,39 +742,61 @@ try:
                 drone_1_pos[0] += delta_x * sleep_time
                 drone_1_pos[1] += delta_y * sleep_time
 
-                #detect collision and manage heights
-                drone_height += go_up * sleep_time
-                print(f"drone height: {drone_height}, normal height: {normal_height}")
-                with lock:
-                    collision_check = drone_collision.detect_collision(drone_1_pos[0], drone_1_pos[1])
-                    if collision_check == "collision":
-                        go_up = 40
-                    elif collision_check == "no collision" and drone_height > normal_height * 1.1: #buffer
-                        go_up = -20
-                    elif collision_check == "no collision" and drone_height < normal_height * 1.1: #buffer
-                        go_up = 20
-                    else:
-                        go_up = 0
+                #calculate new position
+                theta_x_component_change = 0
+                if drone_2_movement[0] > 0:
+                    theta_x_component_change = -1
+                else:
+                    theta_x_component_change = 1
+                theta_x_component = (drone_2_pos[2] + 90 * theta_x_component_change) % 360
+                theta_y_component = (drone_2_pos[2]) % 360
+                delta_x = abs(drone_2_movement[0]) * math.cos(math.radians(theta_x_component)) + drone_2_movement[1] * math.cos(math.radians(theta_y_component))
+                delta_y = abs(drone_2_movement[0]) * math.sin(math.radians(theta_x_component)) + drone_2_movement[1] * math.sin(math.radians(theta_y_component))
+                drone_2_pos[0] += delta_x * sleep_time
+                drone_2_pos[1] += delta_y * sleep_time
+
+            #     #detect collision and manage heights
+            #     drone_height += go_up * sleep_time
+            #     print(f"drone height: {drone_height}, normal height: {normal_height}")
+            #     with lock:
+            #         collision_check = drone_collision.detect_collision(drone_1_pos[0], drone_1_pos[1])
+            #         if collision_check == "collision":
+            #             go_up = 40
+            #         elif collision_check == "no collision" and drone_height > normal_height * 1.1: #buffer
+            #             go_up = -20
+            #         elif collision_check == "no collision" and drone_height < normal_height * 1.1: #buffer
+            #             go_up = 20
+            #         else:
+            #             go_up = 0
                     
-                    if drone_height > 1.5 * normal_height:
-                        drone1.land()
-                        break
+            #         if drone_height > 1.5 * normal_height:
+            #             drone1.land()
+            #             break
                 
-                print(f"updated  position: {drone_1_pos}")
-            else:
+            #     print(f"updated  position: {drone_1_pos}")
+            # else:
                 go_up = 0
-                drone_1_pos[2] = -1 * drone1.get_yaw()
+            #     drone_1_pos[2] = -1 * drone1.get_yaw()
 
             #path planning
             drone_1_movement = drone_1_path_plan.move_towards_goal(drone_1_pos[0], drone_1_pos[1], drone_1_pos[2], drone_1_terminate)
+            drone_2_movement = drone_2_path_plan.move_towards_goal(drone_2_pos[0], drone_2_pos[1], drone_2_pos[2], drone_2_terminate)
+
+            #reached goal?
             if drone_1_movement[0] == 0.1:
                 drone_1_terminate = True
-                print("\n\n\nnow stopping drone movement\n\n\n")
+                print("\n\n\nnow stopping drone movement drone 1\n\n\n")
                 drone_1_movement[0], drone_1_movement[1] = 0, 0
+            if drone_2_movement[0] == 0.1:
+                drone_2_terminate = True
+                print("\n\n\nnow stopping drone movement drone 2\n\n\n")
+                drone_2_movement[0], drone_2_movement[1] = 0, 0
             
             #move drone and update values, already considered if drone terminated
             drone1.send_rc(drone_1_movement[0], drone_1_movement[1], go_up, turn_1)
+            drone2.send_rc(drone_2_movement[0], drone_2_movement[1], go_up, turn_2)
             print(f"Drone 1 Position: {drone_1_pos}, Movement: {drone_1_movement}")
+            print(f"Drone 2 Position: {drone_2_pos}, Movement: {drone_2_movement}")
             time.sleep(0.1)
 
             timer = time.time() #time for keeping track of how much to update drones positions
