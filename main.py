@@ -656,6 +656,9 @@ try:
     drone1.send_rc(0, 0, 40, 0)
     drone2.send_rc(0, 0, 40, 0)
     time.sleep(1.5)
+    drone_height = 60
+    normal_height = 60
+    go_up = 0
     drone1.send_rc(0, 0, 0, 0)
     drone2.send_rc(0, 0, 0, 0)
 
@@ -663,6 +666,7 @@ try:
     sleep_time = 0
     timer = 0
     iter = 0
+    iter_2 = 0
 
     #total time elapsed
     start_time = time.time()
@@ -753,7 +757,7 @@ try:
                 drone_1_pos[0] += delta_x * sleep_time
                 drone_1_pos[1] += delta_y * sleep_time
 
-                        #detect collision and manage heights
+                #detect collision and manage heights
                 drone_height += go_up * sleep_time
                 print(f"drone height: {drone_height}, normal height: {normal_height}")
                 collision_check = drone_collision.detect_collision(drone_1_pos[0], drone_1_pos[1])
@@ -766,8 +770,9 @@ try:
                 else:
                     go_up = 0
                 
-                if drone_height > 1.5 * normal_height:
+                if drone_height > 250:
                     drone1.land()
+                    drone2.land()
                     break
             drone_1_movement = drone_1_path_plan.move_towards_goal(drone_1_pos[0], drone_1_pos[1], drone_1_pos[2], drone_1_terminate)
             if drone_1_movement[0] == 0.1:
@@ -786,9 +791,9 @@ try:
             if turn_2 == 1:
                 turn_2 = 0 #if subject centered, no turn
              #update timer
-            if iter == 0:
+            if iter_2 == 0:
                 sleep_time = 0 #do not update positions for the first loop
-                iter += 1
+                iter_2 += 1
             else:
                 sleep_time = time.time() - timer
 
@@ -827,7 +832,7 @@ try:
                 
             #     print(f"updated  position: {drone_1_pos}")
             # else:
-                go_up = 0
+            #    go_up = 0
             #     drone_1_pos[2] = -1 * drone1.get_yaw()
 
             #path planning
@@ -841,12 +846,12 @@ try:
                 drone_2_movement[0], drone_2_movement[1] = 0, 0
             
             #move drone and update values, already considered if drone terminated
-            drone2.send_rc(drone_2_movement[0], drone_2_movement[1], go_up, turn_2)
+            drone2.send_rc(drone_2_movement[0], drone_2_movement[1], 0, turn_2)
             print(f"Drone 2 Position: {drone_2_pos}, Movement: {drone_2_movement}")
             time.sleep(0.1)
 
             timer = time.time() #time for keeping track of how much to update drones positions
-
+    
     #clean up
     time.sleep(5)
     cv2.destroyAllWindows()
