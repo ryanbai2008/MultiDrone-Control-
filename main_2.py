@@ -17,6 +17,7 @@ from customtello import myTello
 
 import path_planner
 import tello_tracking
+import tello_tracking_2
 import collision
 import logging
 import platform
@@ -642,8 +643,8 @@ try:
     #path planning and CV and collision objects
     drone_1_path_plan = path_planner.PathPlan(path1[0], path1[2], path1[1], path1[3], drone_1_pos[2])
     drone_2_path_plan = path_planner.PathPlan(path_2[0], path_2[2], path_2[1], path_2[3], drone_2_pos[2])
-    drone_1_CV = tello_tracking.CV()
-    drone_2_CV = tello_tracking.CV()
+    drone_1_CV = tello_tracking_2.CV()
+    drone_2_CV = tello_tracking_2.CV()
 
     drone_collision = avoid.Avoid(path1, path_2)
 
