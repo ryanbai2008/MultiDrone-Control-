@@ -31,7 +31,7 @@ WIFI_ADAPTER_1_IP = "192.168.10.2"  # IP address of Wi-Fi Adapter 1 (connected t
 WIFI_ADAPTER_2_IP = "192.168.10.3"  # IP address of Wi-Fi Adapter 2 (connected to Drone 2)
 
 drone_ips = [WIFI_ADAPTER_1_IP, WIFI_ADAPTER_2_IP]
-base_port = 30000
+base_port = 11111
 TELLO_IP = "192.168.10.1"
 
 # Adapter names
@@ -150,21 +150,29 @@ def add_route():
             run_command(f'sudo ip route add {TELLO_IP} via {WIFI_ADAPTER_2_IP} dev wlan1')
 
 # Connect to Tello networks
-connect_wifi(WIFI_1, "TELLO-D06F9F")
-connect_wifi(WIFI_2, "TELLO-EE4263 2")
+# connect_wifi(WIFI_1, "TELLO-D06F9F")
+# connect_wifi(WIFI_2, "TELLO-EE4263 2")
 
-# Assign static IPs
-set_static_ip(WIFI_1, WIFI_ADAPTER_1_IP)
-set_static_ip(WIFI_2, WIFI_ADAPTER_2_IP)
+# # Assign static IPs
+# set_static_ip(WIFI_1, WIFI_ADAPTER_1_IP)
+# set_static_ip(WIFI_2, WIFI_ADAPTER_2_IP)
 
-# Add route if necessary
-add_route()
+# # Add route if necessary
+# add_route()
 
 #proxy_server = VideoProxyServer(drone_ips, server_ip, base_port)
 #proxy_server.start_proxy()
 
 drone1 = myTello(WIFI_ADAPTER_1_IP, base_port)
-drone2 = myTello(WIFI_ADAPTER_2_IP, base_port + 1)
+drone2 = myTello(WIFI_ADAPTER_2_IP, base_port)
+
+drone1.connect()
+drone2.connect()
+
+
+drone1.connect()
+drone2.connect()
+
 
 drone1.connect()
 drone2.connect()
@@ -174,8 +182,8 @@ def start_keep_alive(drone):
     keep_alive_thread = threading.Thread(target=drone.keep_alive, daemon=True)
     keep_alive_thread.start()
     return keep_alive_thread
-keep_alive_thread1 = start_keep_alive(drone1)
-keep_alive_thread2 = start_keep_alive(drone2)
+#keep_alive_thread1 = start_keep_alive(drone1)
+#keep_alive_thread2 = start_keep_alive(drone2)
 
 def is_safe_to_fly():
     # Check battery levels (both drones should have more than 20% battery)
@@ -232,14 +240,14 @@ def move_tello(distance1, distance2, angle1, angle2):# Define the Tello IP and p
     drone1.land()
     drone2.land()
 
-battery1 = drone1.getBattery()
-battery2 = drone2.getBattery()
+# battery1 = drone1.getBattery()
+# battery2 = drone2.getBattery()
 
-height1 = drone1.getHeight()
-height2 = drone2.getHeight()
+# height1 = drone1.getHeight()
+# height2 = drone2.getHeight()
 
-print(battery1)
-print(battery2)
+# print(battery1)
+# print(battery2)
 
 def updateScreen():
     with lock:
@@ -258,7 +266,7 @@ def updateScreen():
         height2 = drone2.getHeight()
 
         startMap.start_screen(battery1, speedx1, speedz1, height1, battery2, speedx2, speedz2, height2)
-        sleep(0.5) #updates every 10 seconds, just gets data doesnt need to be too often or too much cpu
+        sleep(1) #updates every 10 seconds, just gets data doesnt need to be too often or too much cpu
 
 #creates a map of the environment on pygame
 pygame.init()
@@ -606,8 +614,10 @@ def localize():
 
     pygame.display.flip()
 
-localizeThread = threading.Thread(target=localize)
-localizeThread.start()
+pygame.quit()
+
+#localizeThread = threading.Thread(target=localize)
+#localizeThread.start()
 # screenThread = threading.Thread(target=updateScreen)
 # screenThread.start()
 # if(not is_safe_to_fly()):
@@ -622,8 +632,8 @@ try:
     drone2.streamon()
     drone1.start_video_stream()
     drone2.start_video_stream()
-    #drone1.takeoff()
-    #drone2.takeoff()
+    drone1.takeoff()
+    drone2.takeoff()
 
     #path
     start_1_X, start_1_Y, end_1_X, end_1_Y = path[0][0], path[0][1], path[1][0], path[1][1]
@@ -709,7 +719,7 @@ try:
             drone2.send_rc(0, 0, 0, turn_2)
         else:
             logging.debug("No frame recieved for drone 2")
-        time.sleep(0.1)
+        #time.sleep(0.1)
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
@@ -785,7 +795,7 @@ try:
                             drone_1_movement[0], drone_1_movement[1] = 0, 0
             drone1.send_rc(drone_1_movement[0], drone_1_movement[1], go_up, turn_1)
             print(f"Drone 1 Position: {drone_1_pos}, Movement: {drone_1_movement}")
-            time.sleep(0.1)
+            #time.sleep(0.1)
             timer = time.time() #time for keeping track of how much to update drones positions
 
         if img2 is not None:
@@ -852,10 +862,10 @@ try:
             #move drone and update values, already considered if drone terminated
             drone2.send_rc(drone_2_movement[0], drone_2_movement[1], 0, turn_2)
             print(f"Drone 2 Position: {drone_2_pos}, Movement: {drone_2_movement}")
-            time.sleep(0.1)
+            #time.sleep(0.1)
 
             timer = time.time() #time for keeping track of how much to update drones positions
-            
+
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 

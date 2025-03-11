@@ -183,7 +183,7 @@ class myTello:
         print(imudata)
 
         try:
-            match = re.search(r"yaw:(-?\d+)", imudata)
+            match = re.search(r'yaw:\s*(-?\d+\.?\d*)', imudata)
 
             if match:
                 # Extract and return the yaw value from the matched group
@@ -267,7 +267,7 @@ class myTello:
         ffmpeg_cmd = [
             "ffmpeg", "-i", f"udp://192.168.10.1:11111?localaddr={self.wifi_adapter_ip}&fifo_size=1024&overrun_nonfatal=1",
             "-fflags", "nobuffer", "-flags", "low_delay", 
-            "-strict", "experimental", "-an", "-r", "15",
+            "-strict", "experimental", "-an", "-r", "20",
             "-f", "rawvideo", "-pix_fmt", "bgr24", 
             "-tune", "zerolatency",   "-probesize", "32", "-analyzeduration", "0","-max_delay", "1",  "-"
         ]
