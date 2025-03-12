@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 
 class CV:
-    def __init__(self, cfg_path="yolo_model/yolov3-tiny.cfg", weights_path="yolo_model/yolov3-tiny.weights"):
+    def __init__(self, num, cfg_path="yolo_model/yolov3-tiny.cfg", weights_path="yolo_model/yolov3-tiny.weights"):
         self.cfg_path = cfg_path
         self.weights_path = weights_path
         self.net = cv2.dnn.readNet(weights_path, cfg_path, framework='Darknet')
@@ -13,7 +13,7 @@ class CV:
 
 
         self.size = (1280, 720)
-        self.result = cv2.VideoWriter('telloVideo.avi',  
+        self.out = cv2.VideoWriter('telloVid' + str(num) + '.avi',  
                          cv2.VideoWriter_fourcc(*'MJPG'), 
                          30, self.size) 
     
@@ -65,6 +65,7 @@ class CV:
                 return 1  # Go straight
 
         self.out.write(img)
+        print("\n\n\n\nimage written\n\n\n\n")
       
         return 0
       
@@ -72,8 +73,6 @@ class CV:
         try:
             #frame = img.frame
             self.out.write(img)
-            if cv2.waitKey(33) & 0xFF == ord('q'):
-                break
         except:
             print('nuh uh')
         

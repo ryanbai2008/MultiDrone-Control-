@@ -15,7 +15,7 @@ import os
 from customtello import myTello
 
 import path_planner
-import tello_tracking
+import tello_tracking_2 as tello_tracking
 import collision
 import logging
 import platform
@@ -152,8 +152,8 @@ normal_height = 200
 #turn on drones cameras
 drone1.streamon()
 drone2.streamon()
-drone1.start_video_stream()
-drone2.start_video_stream()
+drone1.start_video_stream(1)
+drone2.start_video_stream(2)
 time.sleep(2)
 drone1.takeoff()
 drone2.takeoff()
@@ -175,8 +175,8 @@ drone_1_movement = [0, 0, 0] #(delta X, delta Y, delta angle)
 #path planning and CV and collision objects
 drone_1_path_plan = path_planner.PathPlan(path1[0], path1[2], path1[1], path1[3], drone_1_pos[2])
 drone_2_path_plan = path_planner.PathPlan(path_2[0], path_2[2], path_2[1], path_2[3], drone_2_pos[2])
-drone_1_CV = tello_tracking.CV()
-drone_2_CV = tello_tracking.CV()
+drone_1_CV = tello_tracking.CV(1)
+drone_2_CV = tello_tracking.CV(2)
 
 drone_collision = avoid.Avoid(path1, path_2)
 

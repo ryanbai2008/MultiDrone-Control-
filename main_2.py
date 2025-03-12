@@ -78,7 +78,7 @@ def connect_wifi(adapter, ssid):
     else:  # Linux/macOS
         run_command(f'nmcli device wifi connect "{ssid}" ifname {adapter}')
     
-    time.sleep(2)
+    time.sleep(0.1)
 
 
 
@@ -607,8 +607,8 @@ def localize():
 
     pygame.display.flip()
 
-localizeThread = threading.Thread(target=localize)
-localizeThread.start()
+# localizeThread = threading.Thread(target=localize)
+# localizeThread.start()
 # screenThread = threading.Thread(target=updateScreen)
 # screenThread.start()
 # if(not is_safe_to_fly()):
@@ -621,10 +621,10 @@ try:
     #turn on drones cameras
     drone1.streamon()
     drone2.streamon()
-    drone1.start_video_stream()
-    drone2.start_video_stream()
-    #drone1.takeoff()
-    #drone2.takeoff()
+    drone1.start_video_stream(1)
+    drone2.start_video_stream(2)
+    drone1.takeoff()
+    drone2.takeoff()
 
     #path
     start_1_X, start_1_Y, end_1_X, end_1_Y = path[0][0], path[0][1], path[1][0], path[1][1]
@@ -705,9 +705,7 @@ try:
         else:
             logging.debug("No frame recieved for drones")
             
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
-
+       
         
 
     print("\n\n\nnow moving paths\n\n\n")
@@ -797,7 +795,7 @@ try:
                 if drone_height > 250:
                     drone1.land()
                     drone2.land()
-                    break
+                    
                     
             #path planning
             drone_1_movement = drone_1_path_plan.move_towards_goal(drone_1_pos[0], drone_1_pos[1], drone_1_pos[2], drone_1_terminate)
