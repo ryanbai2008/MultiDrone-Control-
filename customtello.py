@@ -258,18 +258,19 @@ class myTello:
         return 0
     
 
-    def start_video_stream(self):
+    def start_video_stream(self, core_id):
         """Start receiving video from the Tello drone using FFmpeg"""
         if self.video_thread and self.video_thread.is_alive():
             logging.warning("Video stream is already running.")
             return
 
         ffmpeg_cmd = [
-            "ffmpeg", "-i", f"udp://192.168.10.1:11111?localaddr={self.wifi_adapter_ip}&fifo_size=1024&overrun_nonfatal=1",
+            "ffmpeg", "-i", f"udp://192.168.10.1:11111?localaddr={self.wifi_adapter_ip}&fifo_size=64&overrun_nonfatal=1",
             "-fflags", "nobuffer", "-flags", "low_delay", 
-            "-strict", "experimental", "-an", "-r", "20",
+            "-strict", "experimental", "-an", "-r", "15",
             "-f", "rawvideo", "-pix_fmt", "bgr24", 
-            "-tune", "zerolatency",   "-probesize", "32", "-analyzeduration", "0","-max_delay", "1",  "-"
+            "-tune", "zerolatency",   "-probesize", "32", "-analyzeduration", "0","-max_delay", "1", 
+             "-flush_packets", "1",  "-threads", "auto",   "-"
         ]
 
         self.ffmpeg_process = subprocess.Popen(ffmpeg_cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, bufsize=10**8)

@@ -5,7 +5,6 @@ import cv2
 import time
 from time import sleep
 import numpy as np
-import threading
 import sys
 from mapBackground import Background
 import map
@@ -25,7 +24,6 @@ import avoid
 import re
 
 
-lock = threading.Lock()
 # Define the IP addresses of the two Wi-Fi adapters
 WIFI_ADAPTER_1_IP = "192.168.10.2"  # IP address of Wi-Fi Adapter 1 (connected to Drone 1)
 WIFI_ADAPTER_2_IP = "192.168.10.3"  # IP address of Wi-Fi Adapter 2 (connected to Drone 2)

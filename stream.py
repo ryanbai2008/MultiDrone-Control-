@@ -21,11 +21,11 @@ tello.connect()
 
 # Start video streaming
 tello.streamon()
-tello.start_video_stream()
+tello.start_video_stream(1)
 
 # Start video streaming
 tello2.streamon()
-tello2.start_video_stream()
+tello2.start_video_stream(2)
 # Allow some time for frames to start coming in
 time.sleep(2)
 
