@@ -259,7 +259,7 @@ def updateScreen():
         height2 = drone2.getHeight()
 
         startMap.start_screen(battery1, speedx1, speedz1, height1, battery2, speedx2, speedz2, height2)
-        sleep(0.5) #updates every 10 seconds, just gets data doesnt need to be too often or too much cpu
+        sleep(1.5) #updates every 1.5 seconds, just gets data doesnt need to be too often or too much cpu
 
 #creates a map of the environment on pygame
 pygame.init()
@@ -607,13 +607,13 @@ def localize():
 
     pygame.display.flip()
 
-# localizeThread = threading.Thread(target=localize)
-# localizeThread.start()
-# screenThread = threading.Thread(target=updateScreen)
-# screenThread.start()
-# if(not is_safe_to_fly()):
-#     logging.error("Safety check failed. Drones will not take off.")
-#     sys.exit(1)
+localizeThread = threading.Thread(target=localize)
+localizeThread.start()
+screenThread = threading.Thread(target=updateScreen)
+screenThread.start()
+if(not is_safe_to_fly()):
+    logging.error("Safety check failed. Drones will not take off.")
+    sys.exit(1)
 normal_height = 200
 
 
@@ -643,8 +643,8 @@ try:
     #path planning and CV and collision objects
     drone_1_path_plan = path_planner.PathPlan(path1[0], path1[2], path1[1], path1[3], drone_1_pos[2])
     drone_2_path_plan = path_planner.PathPlan(path_2[0], path_2[2], path_2[1], path_2[3], drone_2_pos[2])
-    drone_1_CV = tello_tracking_2.CV()
-    drone_2_CV = tello_tracking_2.CV()
+    drone_1_CV = tello_tracking.CV()
+    drone_2_CV = tello_tracking.CV()
 
     drone_collision = avoid.Avoid(path1, path_2)
 

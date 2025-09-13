@@ -16,7 +16,7 @@ import os
 from customtello import myTello
 
 import path_planner
-import tello_tracking
+import tello_tracking_2 as tello_tracking
 import collision
 import logging
 import platform

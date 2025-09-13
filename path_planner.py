@@ -29,7 +29,7 @@ class PathPlan:
         #if goal not reached, calculate movement neccesary to move one small step closer to goal
         angle_diff_smaller = math.acos((diff[0] * direction_vector[0] + diff[1] * direction_vector[1])/(magnitude_diff * magnitude_direction_vector)) #u.v/|u||v| = cos(theta), theta < 180
         
-        movement_scale = 0.1 #change for smoother or less smooth path
+        movement_scale = 0.05 #change for smoother or less smooth path
         #sign of Y_movement is always correct, but X_movement is not, change of basis to determine
         X_movement = math.sin(angle_diff_smaller) * self.original_magnitude_diff * movement_scale 
         Y_movement = math.cos(angle_diff_smaller) * self.original_magnitude_diff * movement_scale 

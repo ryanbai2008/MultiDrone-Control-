@@ -5,7 +5,7 @@ class CV:
     def __init__(self, num, cfg_path="yolo_model/yolov3-tiny.cfg", weights_path="yolo_model/yolov3-tiny.weights"):
         self.cfg_path = cfg_path
         self.weights_path = weights_path
-        self.net = cv2.dnn.readNet(weights_path, cfg_path, framework='Darknet')
+        self.net = cv2.dnn.readNetFromDarknet(cfg_path, weights_path)
         with open("yolo_model/coco.names", "r") as f:
             self.classes = [line.strip() for line in f.readlines()]
         self.layer_names = self.net.getLayerNames()
@@ -19,9 +19,10 @@ class CV:
     
     def center_subject(self, img, drone_number):
         height, width, _ = img.shape
-        #img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        small = cv2.resize(img, (416, 416), interpolation=cv2.INTER_LINEAR)
 
-        blob = cv2.dnn.blobFromImage(img, 0.00392, (416, 416), (0, 0, 0), True, crop=False)
+        blob = cv2.dnn.blobFromImage(small, 0.00392, (416, 416), (0, 0, 0), True, crop=False)
         self.net.setInput(blob)
         outs = self.net.forward(self.output_layers)
 
